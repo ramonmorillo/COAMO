@@ -1,0 +1,55 @@
+/*
+ * COAMO · color de marca. La hoja base (main.css) procede de DERMAPEX y usa variables --iris-teal-*;
+ * aquí se redefinen con un granate para que las dos aplicaciones no se confundan a simple vista.
+ */
+:root {
+  --iris-teal-950: #2e0b15;
+  --iris-teal-900: #4a1322;
+  --iris-teal-800: #6b2134;
+  --iris-teal-700: #822a40;
+  --iris-teal-600: #99354d;
+  --iris-teal-300: #d9a3b1;
+  --iris-teal-200: #ecccd5;
+  --iris-teal-100: #f6e6eb;
+  --iris-teal-50: #fbf3f5;
+}
+
+.coamo-center-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.coamo-center-table th,
+.coamo-center-table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--iris-divider);
+  vertical-align: top;
+}
+
+.coamo-center-table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--iris-muted);
+  font-weight: 600;
+}
+
+.coamo-center-table code {
+  font-size: 0.85rem;
+}
+
+.coamo-table-wrap {
+  overflow-x: auto;
+}
+
+.coamo-pending-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--iris-text-secondary);
+}
+
+.coamo-pending-list li {
+  margin-bottom: 0.35rem;
+}
