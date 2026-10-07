@@ -53,3 +53,8 @@
 .coamo-pending-list li {
   margin-bottom: 0.35rem;
 }
+
+/* Antetítulo de la portada: en main.css (heredado de DERMAPEX) es un azul verdoso fijo. */
+.hero-copy .iris-eyebrow {
+  color: var(--iris-teal-200);
+}
