@@ -53,3 +53,63 @@
 .coamo-pending-list li {
   margin-bottom: 0.35rem;
 }
+
+/* Formularios COAMO */
+.coamo-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.coamo-fieldset legend {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  padding: 0;
+}
+.coamo-field-hint {
+  margin: -0.2rem 0 0.5rem;
+  font-size: var(--fs-sm);
+  color: var(--iris-muted);
+}
+.coamo-radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.coamo-source {
+  font-size: var(--fs-xs);
+  color: var(--iris-muted);
+  font-weight: 400;
+  margin-left: 0.35rem;
+}
+.coamo-keyvalues {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--sp-3) var(--sp-5);
+  margin: 0;
+}
+.coamo-keyvalues dt {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--iris-muted);
+  font-weight: 600;
+}
+.coamo-keyvalues dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+.coamo-criteria {
+  display: grid;
+  gap: var(--sp-4);
+}
+.coamo-gap-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+.coamo-inline-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-3);
+  align-items: end;
+}

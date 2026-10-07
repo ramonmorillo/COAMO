@@ -73,14 +73,14 @@ export function HomePage() {
 
       <section className="card" aria-labelledby="status-title">
         <h2 id="status-title">Estado de la herramienta</h2>
-        <Notice tone="info" title="Versión base: acceso y centros">
-          Esta versión permite el acceso seguro y la consulta de centros. Todavía no se pueden registrar pacientes.
+        <Notice tone="info" title="Disponible: pacientes, inclusión, visitas y datos clínicos">
+          Alta seudonimizada, elegibilidad y consentimiento, visitas basal, de seguimiento y final (12 meses ±1 mes),
+          contactos y variables clínicas y de tratamiento del protocolo. <Link to="/patients">Ir a pacientes</Link>
         </Notice>
-        <p>El registro clínico se incorporará cuando estén aprobados:</p>
+        <p>En preparación:</p>
         <ul className="coamo-pending-list">
-          <li>el modelo CMO adaptado a coagulopatías congénitas (variables, puntuaciones, puntos de corte e intervenciones);</li>
-          <li>el cuaderno de recogida de datos (inclusión, visitas basal, seguimiento y final);</li>
-          <li>las versiones de los cuestionarios (IEXPAC, EQ-5D-3L, EVASAF y Morisky-Green).</li>
+          <li>estratificación CMO de coagulopatías congénitas (SEFH 2026) y actuaciones de atención farmacéutica por prioridad;</li>
+          <li>cuestionarios IEXPAC, EQ-5D-3L, EVASAF y Morisky-Green.</li>
         </ul>
       </section>
     </div>
