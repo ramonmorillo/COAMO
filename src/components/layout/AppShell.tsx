@@ -144,6 +144,9 @@ export function AppShell() {
             <NavLink to="/centers" className={navLinkClass}>
               Centros
             </NavLink>
+            <NavLink to="/questionnaires/export" className={navLinkClass}>
+              Exportación
+            </NavLink>
           </nav>
           <div className="topbar-meta">
             <span className="system-status" title={`Sesión autenticada en el entorno profesional de ${PROJECT_IDENTITY.name}`}>

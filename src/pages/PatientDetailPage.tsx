@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { ErrorState } from '../components/common/ErrorState';
@@ -19,6 +19,9 @@ import {
   createVisit, getInclusion, getPatient, getSchedule, listVisits, saveInclusion, updatePatientStatus, updateVisit,
   type Patient, type Schedule, type Visit,
 } from '../services/patientService';
+
+// Cuestionarios: módulo cargado bajo demanda (textos de los instrumentos fuera del arranque).
+const PatientQuestionnairesCard = lazy(async () => ({ default: (await import('../components/questionnaires/PatientQuestionnairesCard')).PatientQuestionnairesCard }));
 
 type ExitStatus = 'not_included' | 'withdrawn' | 'lost_to_followup';
 
@@ -72,6 +75,9 @@ export function PatientDetailPage() {
         <>
           <ScheduleCard schedule={schedule} />
           <VisitsCard patient={patient} visits={visits} onChanged={load} />
+          <Suspense fallback={<LoadingState label="Cargando cuestionarios..." />}>
+            <PatientQuestionnairesCard patientId={patient.id} visits={visits} />
+          </Suspense>
         </>
       ) : null}
 

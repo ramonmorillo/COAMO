@@ -1,0 +1,80 @@
+Cuestionario de salud
+Versión en español para España
+(Spanish version for Spain)
+En cada sección, marque UNA casilla, la que mejor describa su estado de salud HOY.
+MOVILIDAD
+No tengo problemas para caminar
+Tengo algunos problemas para caminar
+No puedo moverme de la cama
+CUIDADOS PERSONALES
+No tengo problemas con los cuidados personales
+Tengo algunos problemas para lavarme (bañarme) o vestirme
+No puedo lavarme (bañarme) ni vestirme
+ACTIVIDADES HABITUALES (p. ej., trabajar, estudiar, hacer las tareas domésticas, actividades en familia o actividades de tiempo libre)
+No tengo problemas para realizar mis actividades habituales
+Tengo algunos problemas para realizar mis actividades habituales
+No puedo realizar mis actividades habituales
+DOLOR / MOLESTIAS (p. ej., mareos, náuseas, picazón [comezón])
+No tengo dolor ni molestias
+Tengo dolor o molestias moderadas
+Tengo dolor o molestias extremas
+ANSIEDAD (ANGUSTIA) / DEPRESIÓN
+No tengo ansiedad ni depresión
+Tengo ansiedad o depresión moderada
+Tengo ansiedad o depresión extrema
+El mejor estado de salud que usted se pueda imaginar
+El mejor estado de salud que usted se pueda imaginar
+10
+0
+20
+30
+40
+50
+60
+80
+70
+90
+100
+5
+15
+25
+35
+45
+55
+75
+65
+85
+95
+10
+0
+20
+30
+40
+50
+60
+80
+70
+90
+100
+5
+15
+25
+35
+45
+55
+75
+65
+85
+95
+Nos gustaría saber en qué medida es bueno o malo su estado de salud HOY.
+Esta escala está numerada del 0 al 100.
+100 representa el mejor estado de salud que usted se pueda imaginar.0 representa el peor estado de salud que usted se pueda imaginar.
+Marque con una X en la escala para indicar cuál es su estado de salud HOY.
+Ahora escriba en la casilla que aparece a continuación el número que ha marcado en la escala.
+SU ESTADO DE SALUD HOY =
+SU ESTADO DE SALUD HOY =
+El peor estado de salud que usted se pueda imaginar
+El peor estado de salud que usted se pueda imaginar
+3
+© EuroQol Research Foundation. EQ-5D™ is a trade mark of the EuroQol Research Foundation. Spain (Spanish) v2.0
+© EuroQol Research Foundation. EQ-5D™ is a trade mark of the EuroQol Research Foundation. Spain (Spanish) v2.0

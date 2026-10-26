@@ -1,0 +1,20 @@
+PROYECTO EVASAF: Encuesta de valoración de la satisfacción de los pacientes con la Atención Farmacéutica recibida en las consultas de Farmacia hospitalaria
+Marque con na X la puntuación que considere más acorde con el servicio recibido (1 muy deficiente, 5 excelente).
+Con la Atención Farmacéutica (AF) que recibo en la consulta de Farmacia de mi centro hospitalario:
+Pregunta
+1
+2
+3
+4
+5
+Conozco mejor los medicamentos que utilizo.
+Sé qué medicamentos puedo tomar y cuáles no por las interacciones que puedan existir. Mi farmacéutico me pregunta por mi medicación domiciliaria.
+Soy más consciente de la importancia de cumplir mi tratamiento para ser adherente.
+Tengo mayores conocimientos sobre las reacciones adversas que pueden provocar mis medicamentos.
+He logrado reducir las reacciones adversas de los medicamentos que tomo gracias a una mejor explicación sobre el manejo de los mismos.
+Siento la implicación de mi farmacéutico en mi problema de salud.
+Continuaría visitando la consulta de atención farmacéutica para seguir en el programa de seguimiento de mis medicamentos.
+Solicitaría a mi médico que continúe trabajando conjuntamente con mi farmacéutico porque confío en él.
+La atención farmacéutica prestada se lleva a cabo de forma privada.
+Estoy satisfecho con el servicio que recibo.
+Monje-Agudo P, Borrego-Izquierdo Y, Robustillo-Cortés Mde L, Jiménez-Galán R, Almeida-González CV, Morillo-Verdugo RA. Diseño y validación de una encuesta de satisfacción con la atención farmacéutica recibida en las consultas de farmacia hospitalaria [Design and validation of a satisfaction survey with pharmaceutical care received in hospital pharmacyconsultation]. Farm Hosp. 2015 May 1;39(3):152-6. Spanish. doi: 10.7399/fh.2015.39.3.8366. PMID: 26005890.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ErrorState } from '../components/common/ErrorState';
@@ -8,6 +8,8 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { PROJECT_IDENTITY } from '../constants/institutional';
 import { CENTER_ROLE_LABEL, summarizeCenters, type CoamoCenter } from '../services/centerDisplay';
 import { getOwnProfile, listVisibleCenters, type CoamoProfile } from '../services/coamoDataService';
+
+const QuestionnaireCompletionCard = lazy(async () => ({ default: (await import('../components/questionnaires/QuestionnaireCompletionCard')).QuestionnaireCompletionCard }));
 
 const ROLE_LABEL: Record<CoamoProfile['role'], string> = {
   investigator: 'Investigador/a de centro',
@@ -71,16 +73,23 @@ export function HomePage() {
         )}
       </section>
 
+      {centers.length > 0 ? (
+        <Suspense fallback={<LoadingState label="Cargando indicadores..." />}>
+          <QuestionnaireCompletionCard isCoordinator={isCoordinator} />
+        </Suspense>
+      ) : null}
+
       <section className="card" aria-labelledby="status-title">
         <h2 id="status-title">Estado de la herramienta</h2>
-        <Notice tone="info" title="Disponible: pacientes, inclusión, visitas y datos clínicos">
+        <Notice tone="info" title="Disponible: pacientes, inclusión, visitas, datos clínicos y cuestionarios V0/VF">
           Alta seudonimizada, elegibilidad y consentimiento, visitas basal, de seguimiento y final (12 meses ±1 mes),
-          contactos y variables clínicas y de tratamiento del protocolo. <Link to="/patients">Ir a pacientes</Link>
+          contactos, variables clínicas y de tratamiento del protocolo, y cuestionarios IEXPAC, EQ-5D-3L, EVASAF y VERITAS-PRN
+          con evolución V0–VF y exportación. <Link to="/patients">Ir a pacientes</Link>
         </Notice>
         <p>En preparación:</p>
         <ul className="coamo-pending-list">
           <li>estratificación CMO de coagulopatías congénitas (SEFH 2026) y actuaciones de atención farmacéutica por prioridad;</li>
-          <li>cuestionarios IEXPAC, EQ-5D-3L, EVASAF y Morisky-Green.</li>
+          <li>Morisky-Green (citado en el protocolo; no se ha aportado su formulario) y VERITAS-Pro (documento fuente no aportado).</li>
         </ul>
       </section>
     </div>
