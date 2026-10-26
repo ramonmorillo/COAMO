@@ -2,7 +2,7 @@
 
 Herramienta digital del estudio COAMO (atención farmacéutica según el modelo CMO en pacientes adultos con hemofilia A, hemofilia B o enfermedad de von Willebrand). Acceso restringido a profesionales autorizados.
 
-**Estado (2026-10-07): versión base.** Acceso seguro, comprobación de autorización COAMO y consulta de centros. Todavía no hay registro de pacientes: depende del modelo CMO de coagulopatías, del CRD aprobado y de las versiones de los cuestionarios (ver `docs` del repositorio DERMAPEX, carpeta `docs/coamo/`).
+**Estado (2026-10-26):** acceso seguro y autorización COAMO, centros, pacientes seudonimizados, inclusión, visitas y datos clínicos, y **cuestionarios V0/VF** (IEXPAC, EQ-5D-3L autoadministrado/entrevista, EVASAF, VERITAS-PRN; VERITAS-Pro pendiente de documento) con evolución V0–VF, exportación CSV e indicadores de cumplimiento. Documentación: [`docs/CUESTIONARIOS.md`](docs/CUESTIONARIOS.md) y [`docs/CUESTIONARIOS_TRAZABILIDAD.md`](docs/CUESTIONARIOS_TRAZABILIDAD.md). Pendiente: modelo CMO de coagulopatías e intervenciones.
 
 ## Arquitectura
 
@@ -32,6 +32,8 @@ cp .env.example .env   # URL y clave pública del proyecto Supabase compartido
 npm ci
 npm run dev
 npm test
+# Prueba E2E de la interfaz con API simulada (ver cabecera del script):
+# node e2e/questionnaires.smoke.cjs
 ```
 
 ## Despliegue

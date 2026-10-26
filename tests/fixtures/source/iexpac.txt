@@ -1,0 +1,35 @@
+CUESTIONARIO IEXPAC: Instrumento de Evaluación de la eXperiencia del PAciente Crónico
+PREGUNTAS
+NUNCA
+CASI NUNCA
+A VECES
+CASI SIEMPRE
+SIEMPRE
+1. Respetan mi estilo de vida
+Los profesionales que me atienden me escuchan y tienen en cuenta mis necesidades, costumbres y preferencias para adaptar mi plan de cuidados y tratamiento.
+2. Están coordinados para ofrecerme una buena atención
+Los profesionales que me atienden en el centro de salud y los que me atienden en el hospital hablan entre ellos y se coordinan para mejorar mi bienestar y mi calidad de vida.
+3. Me ayudan a informarme por Internet
+Los profesionales que me atienden me informan sobre páginas web y foros de internet de los que me puedo fiar para conocer mejor mi enfermedad, su tratamiento y las consecuencias que pueden tener en mi vida.
+4. Ahora sé cuidarme mejor
+Con el apoyo de mis profesionales siento que ha mejorado mi confianza y mi capacidad para cuidar de mí mismo/a, manejar mejor mis problemas de salud y mantener mi autonomía.
+5. Me preguntan y me ayudan a seguir mi plan de tratamientoReviso con los profesionales que me atienden el cumplimiento de mi plan de cuidados y tratamiento y, si tengo dudas, me las aclaran.
+6. Acordamos objetivos para llevar una vida sana y controlar mejor mi enfermedad
+He podido acordar con los profesionales que me atienden objetivos concretos sobre alimentación, ejercicio físico y cómo tomar adecuadamente la medicación para controlar mejor mi enfermedad.
+7. Uso internet y el móvil para consultar mi historia clínicaUso Internet y el móvil para consultar mi historia clínica, resultados de mis pruebas, citas programadas y acceder a otros servicios en la web de mi Servicio de salud.
+8. Se aseguran de que tomo la medicación correctamenteLos profesionales que me atienden revisan conmigo todos los medicamentos que tomo, cómo los tomo, cómo me sientan y puedo consultarles las dudas que tenga.
+9. Se preocupan por mi bienestar
+Los profesionales que me atienden se preocupan por mi calidad de vida y los veo comprometidos para que mejore mi bienestar.
+10. Me informan de recursos sanitarios y sociales que me pueden ayudar
+Los profesionales que me atienden me informan sobre los recursos sanitarios y sociales de que dispongo (en mi barrio, ciudad o pueblo) y que puedo utilizar para mejorar mis problemas de salud y para cuidarme mejor.
+11. Me animan a hablar con otros pacientes
+Los profesionales que me atienden me animan a participar en grupos de pacientes para compartir información y experiencias sobre cómo cuidarnos y mejorar nuestra salud.
+Preguntas condicionadas:
+12. Se preocupan por mí al llegar a casa tras estar en el hospital
+Si usted ha estado ingresado en el hospital en los últimos 6 meses, por favor, responda a la siguiente pregunta: Después de recibir el alta del hospital, me han llamado o visitado en casa para ver cómo me encontraba y qué cuidados necesitaba.
+13. Me orientan para no tener una nueva urgencia
+Si usted ha recibido atención en urgencias en los últimos 6 meses, por favor, responda a la siguiente pregunta: Después de haber estado en urgencias, los profesionales que me atienden saben lo que me ha pasado y me orientan para evitar una nueva urgencia.
+14. Me atienden bien en mi domicilio
+Si usted ha recibido atención sanitaria en su domicilio en los últimos 6 meses, por favor, responda a la siguiente pregunta: Los profesionales que me atienden en mi casa tratan de solucionar mis problemas de salud de forma coordinada con los profesionales del centro de salud y del hospital, y si es necesario, con los servicios sociales.
+15. Los servicios sociales están coordinados con los servicios sanitarios para ofrecerme una buena atención
+Si usted ha recibido atención de los servicios sociales en los últimos 6 meses, por favor, responda a la siguiente pregunta: Los profesionales que me atienden en los servicios sociales hablan y se coordinan con los profesionales sanitarios para ofrecerme una buena atención.
