@@ -4,9 +4,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  STRAT_VARIABLES, applicableVariables, computeStratification, finalPriority, priorityForScore, suggestFromClinical,
+  STRAT_VARIABLES, applicableVariables, computeStratification, contextNotes, finalPriority, priorityForScore, suggestFromClinical,
   type StratAnswers,
 } from '../src/domain/stratification';
+import { buildStratificationPayload } from '../src/services/stratificationService';
 
 const maxOf = (id: string) => Math.max(...STRAT_VARIABLES.find((v) => v.id === id)!.options.map((o) => o.points));
 const sumMax = (ids: string[]) => ids.reduce((t, id) => t + maxOf(id), 0);
@@ -137,5 +138,34 @@ describe('sugerencias desde los datos clínicos', () => {
   });
   it('terapia génica se propone como excepción', () => {
     expect(suggestFromClinical(40, { treatment_type: 'gene_therapy' }).advanced_therapy.value).toBe('yes');
+  });
+});
+
+describe('información de apoyo (spec COAMO §5.3-5.4: no puntúa)', () => {
+  it('% de dispensaciones y EQ-5D-3L junto a adherencia y calidad de vida', () => {
+    const n = contextNotes({ dispensations_collected: 10, dispensations_expected: 12 }, { date: '2026-01-15', profile: '11223', vas: 60 });
+    expect(n.non_adherence).toMatch(/83,3 % \(10\/12\)/);
+    expect(n.low_qol).toBe('EQ-5D-3L del 15/01/2026: perfil 11223, EVA 60.');
+  });
+  it('sin datos lo dice, sin inventar', () => {
+    const n = contextNotes({ dispensations_collected: 3, dispensations_expected: 0 }, null);
+    expect(n.non_adherence).toMatch(/no calculable/);
+    expect(n.low_qol).toMatch(/Sin EQ-5D-3L/);
+  });
+});
+
+describe('carga útil del registro', () => {
+  const base = { status: 'in_progress' as const, answers: { age: '18_50', pain: null, route: '' }, suggestions: {}, clinical_source_visit_id: null,
+    raised_priority: null, raised_reason: '  algo ', restratification_reason: '  Cambio de tratamiento  ' };
+  it('descarta respuestas vacías y motivos que no proceden', () => {
+    const p = buildStratificationPayload(base, true);
+    expect(p.answers).toEqual({ age: '18_50' });
+    expect(p.raised_reason).toBeNull();
+    expect(p.restratification_reason).toBeNull();
+  });
+  it('conserva y recorta los motivos cuando proceden', () => {
+    const p = buildStratificationPayload({ ...base, raised_priority: 1 }, false);
+    expect(p.raised_reason).toBe('algo');
+    expect(p.restratification_reason).toBe('Cambio de tratamiento');
   });
 });

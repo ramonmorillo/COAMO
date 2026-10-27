@@ -2,7 +2,7 @@
 
 Herramienta digital del estudio COAMO (atención farmacéutica según el modelo CMO en pacientes adultos con hemofilia A, hemofilia B o enfermedad de von Willebrand). Acceso restringido a profesionales autorizados.
 
-**Estado (2026-10-27):** acceso seguro y autorización COAMO, centros, pacientes seudonimizados, inclusión, visitas y datos clínicos, y **cuestionarios V0/VF** (IEXPAC, EQ-5D-3L autoadministrado/entrevista, EVASAF, VERITAS-PRN y VERITAS-Pro; este último requiere una migración de BD pendiente, ver `docs/CUESTIONARIOS.md` §9) con evolución V0–VF, exportación CSV e indicadores de cumplimiento. Documentación: [`docs/CUESTIONARIOS.md`](docs/CUESTIONARIOS.md) y [`docs/CUESTIONARIOS_TRAZABILIDAD.md`](docs/CUESTIONARIOS_TRAZABILIDAD.md). **Estratificación CMO** (modelo SEFH v2.0) calculable en cualquier visita realizada, aún sin guardar: [`docs/ESTRATIFICACION_CMO.md`](docs/ESTRATIFICACION_CMO.md). Pendiente: persistencia de la estratificación e intervenciones.
+**Estado (2026-10-27):** acceso seguro y autorización COAMO, centros, pacientes seudonimizados, inclusión, visitas y datos clínicos, y **cuestionarios V0/VF** (IEXPAC, EQ-5D-3L autoadministrado/entrevista, EVASAF, VERITAS-PRN y VERITAS-Pro; este último requiere una migración de BD pendiente, ver `docs/CUESTIONARIOS.md` §9) con evolución V0–VF, exportación CSV e indicadores de cumplimiento. Documentación: [`docs/CUESTIONARIOS.md`](docs/CUESTIONARIOS.md) y [`docs/CUESTIONARIOS_TRAZABILIDAD.md`](docs/CUESTIONARIOS_TRAZABILIDAD.md). **Estratificación CMO** (modelo SEFH v2.0) por visita, con registro propio en `coag_stratifications` (migración pendiente de aplicar): [`docs/ESTRATIFICACION_CMO.md`](docs/ESTRATIFICACION_CMO.md). Pendiente: actuaciones de AF por prioridad.
 
 ## Arquitectura
 

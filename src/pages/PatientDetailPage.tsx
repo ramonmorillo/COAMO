@@ -19,6 +19,7 @@ import {
   createVisit, getInclusion, getPatient, getSchedule, listVisits, saveInclusion, updatePatientStatus, updateVisit,
   type Patient, type Schedule, type Visit,
 } from '../services/patientService';
+import { listStratificationsForVisits, type StratificationRecord } from '../services/stratificationService';
 
 // Cuestionarios: módulo cargado bajo demanda (textos de los instrumentos fuera del arranque).
 const PatientQuestionnairesCard = lazy(async () => ({ default: (await import('../components/questionnaires/PatientQuestionnairesCard')).PatientQuestionnairesCard }));
@@ -244,10 +245,15 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const canAdd = patient.status === 'included';
+  const [strata, setStrata] = useState<Record<string, StratificationRecord>>({});
 
   useEffect(() => {
     if (!allowedTypes.includes(type)) setType(allowedTypes[0]);
   }, [allowedTypes, type]);
+
+  useEffect(() => {
+    void listStratificationsForVisits(visits.map((v) => v.id)).then((r) => setStrata(Object.fromEntries(r.data.map((x) => [x.visit_id, x]))));
+  }, [visits]);
 
   const add = async (event: FormEvent) => {
     event.preventDefault();
@@ -296,6 +302,12 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
                       <>
                         {v.visit_type === 'baseline' || v.visit_type === 'final' ? <><Link to={`/visits/${v.id}/clinical`}>Datos clínicos</Link>{' · '}</> : null}
                         <Link to={`/visits/${v.id}/stratification`}>Estratificación CMO</Link>
+                        {strata[v.id] ? (
+                          <span className="coamo-field-hint">
+                            {' '}· {strata[v.id].status === 'completed' && strata[v.id].final_priority ? `Prioridad ${strata[v.id].final_priority}` : 'borrador'}
+                            {strata[v.id].status === 'completed' && v.visit_type === 'baseline' ? ' (basal: prioridad del análisis)' : ''}
+                          </span>
+                        ) : null}
                       </>
                     ) : '—'}
                   </td>

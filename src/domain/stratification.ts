@@ -244,6 +244,23 @@ export function followUpFor(priority: Priority): string {
   return FOLLOWUP_BY_PRIORITY[priority];
 }
 
+// ── Información de apoyo al juicio profesional (spec COAMO §5.3-5.4; no puntúa) ──
+
+export type Eq5dContext = { date: string | null; profile: string | null; vas: number | null } | null;
+
+export function contextNotes(clinical: ClinicalSnapshot | null, eq5d: Eq5dContext): Record<string, string> {
+  const collected = clinical ? num(clinical.dispensations_collected) : null;
+  const expected = clinical ? num(clinical.dispensations_expected) : null;
+  const pct = collected === null || expected === null || expected === 0 ? null : Math.round((collected / expected) * 1000) / 10;
+  const eqDate = eq5d?.date ? eq5d.date.slice(0, 10).split('-').reverse().join('/') : null;
+  return {
+    non_adherence: `Dispensaciones recogidas/previstas (últimos 12 meses): ${pct === null ? 'no calculable' : `${String(pct).replace('.', ',')} % (${collected}/${expected})`}. Morisky-Green: sin formulario en la herramienta.`,
+    low_qol: eq5d
+      ? `EQ-5D-3L${eqDate ? ` del ${eqDate}` : ''}: perfil ${eq5d.profile ?? 'incompleto'}, EVA ${eq5d.vas ?? '—'}.`
+      : 'Sin EQ-5D-3L completado hasta esta visita.',
+  };
+}
+
 // ── Sugerencias desde los datos clínicos del protocolo (el profesional confirma o corrige) ──
 
 export type Suggestion = { value: string; from: string };

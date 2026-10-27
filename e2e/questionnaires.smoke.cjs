@@ -27,6 +27,7 @@ const db = {
   coag_patient_schedule: [{ patient_id: 'p1', baseline_date: '2026-01-15', final_due_date: '2027-01-15', final_window_start: '2026-12-15', final_window_end: '2027-02-15', final_date: '2026-10-20', final_status: 'completed', final_deviation_days: -87, final_in_window: false }],
   coag_clinical_assessments: [{ visit_id: 'v0', treatment_regimen: 'prophylaxis', treatment_type: 'recombinant_extended' }],
   coag_questionnaire_administrations: [],
+  coag_stratifications: [],
   coag_audit_log: [],
 };
 const writes = [];
@@ -36,6 +37,21 @@ function scores(code, r) {
   if (code === 'EQ5D3L') { const d = ['mobility','self_care','usual_activities','pain_discomfort','anxiety_depression']; const n = d.filter(k => k in r).length;
     return { dimensions_answered: n, profile_complete: n === 5, profile: n === 5 ? d.map(k => r[k]).join('') : null, vas: 'vas' in r ? r.vas : null, utility_index: null }; }
   return { items_answered: Object.keys(r).length, complete: false };
+}
+// Cálculo mínimo de la estratificación (HA) para simular lo que fija la BD (coag_private.stratification_result).
+const SP = { age: { lt18: 0, '18_50': 1, gt50: 2 }, obesity: { yes: 1, no: 0 }, inhibitors: { yes: 3, no: 0 }, pain: { none: 0, mild_moderate: 1, persistent: 2, acute: 3 },
+  joint_status: { yes: 3, no: 0 }, bleeding_management: { none: 0, hospital_admission: 2, outpatient: 3 }, hemophilia_severity: { mild: 0, moderate: 1, severe: 3 },
+  spontaneous_bleeds_gt2: { yes: 4, no: 0 }, comorbidity: { yes: 1, no: 0 }, degenerative_joint: { yes: 2, no: 0 }, psychological: { yes: 3, no: 0 },
+  advanced_therapy: { yes: 0, no: 0 }, route: { sc_only: 0, sc_iv: 1, iv: 2 }, dose_change: { yes: 2, no: 0 }, extra_doses: { yes: 3, no: 0 },
+  home_dispensing: { yes: 1, no: 0 }, prophylaxis: { yes: 3, no: 0 }, non_adherence: { yes: 4, no: 0 }, socioeconomic: { yes: 3, no: 0 },
+  intense_activity: { yes: 1, no: 0 }, cv_risk: { yes: 2, no: 0 }, access_difficulty: { yes: 2, no: 0 }, limited_knowledge: { yes: 3, no: 0 },
+  transition: { yes: 4, no: 0 }, low_qol: { yes: 1, no: 0 } };
+function strat(row) {
+  const a = row.answers || {}; let mn = 0, mx = 0;
+  for (const [k, o] of Object.entries(SP)) { if (a[k] in o) { mn += o[a[k]]; mx += o[a[k]]; } else mx += Math.max(...Object.values(o)); }
+  const pr = s => (s >= 28 ? 1 : s >= 20 ? 2 : 3);
+  const mp = a.advanced_therapy === 'yes' ? 1 : a.age && a.advanced_therapy && pr(mn) === pr(mx) ? pr(mn) : null;
+  return { score_min: mn, score_max: mx, score: mn === mx ? mn : null, model_priority: mp, final_priority: row.raised_priority ?? mp, model_version: 'CMO-COAG-SEFH-v2.0' };
 }
 function filterRows(rows, params) {
   return rows.filter(row => [...params].every(([k, v]) => {
@@ -60,13 +76,15 @@ async function handle(route) {
       return route.fulfill({ status: 409, json: { code: '23505', message: 'duplicate' } });
     const row = { id: 'a' + (rows.length + 1), revision: 1, instrument_version: body.instrument_code === 'EQ5D3L' ? (body.administration_mode === 'interviewer' ? 'EQ-5D-3L-ES-ES-v1.0-interviewer' : 'EQ-5D-3L-ES-ES-v2.0-self') : 'v-test',
       scores: scores(body.instrument_code, body.responses || {}), last_correction_reason: null, last_corrected_at: null, completed_at: body.status === 'completed' ? '2026-10-26' : null, created_at: '', updated_at: '', ...body };
+    if (table === 'coag_stratifications') { delete row.instrument_version; delete row.scores; Object.assign(row, strat(row)); }
     rows.push(row); out = [row];
   } else if (m === 'PATCH') {
     const body = JSON.parse(req.postData()); writes.push({ m, table, body, filter: url.search });
     const hits = filterRows(rows, url.searchParams);
     for (const r of hits) {
       if (r.status === 'completed' && !body.correction_reason) return route.fulfill({ status: 400, json: { message: 'Este cuestionario está completado: indique el motivo de la corrección.' } });
-      Object.assign(r, body); r.revision += 1; r.scores = scores(r.instrument_code, r.responses || {});
+      Object.assign(r, body); r.revision += 1;
+      if (table === 'coag_stratifications') Object.assign(r, strat(r)); else r.scores = scores(r.instrument_code, r.responses || {});
       if (body.correction_reason) { r.last_correction_reason = body.correction_reason; r.last_corrected_at = '2026-10-26T10:00:00Z'; }
       delete r.correction_reason; if (r.status === 'completed' && !r.completed_at) r.completed_at = '2026-10-26';
     }
@@ -183,10 +201,34 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   const resultText = await page.locator('#strat-result').locator('..').innerText();
   ok(/Puntuación: 23/.test(resultText) && /Prioridad 2/.test(resultText) && /cada 6 meses/.test(resultText), 'estratificación: 23 puntos → Prioridad 2, valoración cada 6 meses');
   await page.getByLabel(/Elevar el nivel/).selectOption('1');
-  ok(await page.getByText('Indique el motivo de la elevación de nivel.').isVisible(), 'elevación de nivel: exige motivo');
+  ok(await page.getByText('Indique el motivo de la elevación de nivel.', { exact: true }).isVisible(), 'elevación de nivel: exige motivo');
   ok(await page.getByText(/elevado desde Prioridad 2/).isVisible(), 'elevación de nivel: Prioridad 1 con nivel del modelo visible');
+  const confirm = page.getByRole('button', { name: 'Confirmar estratificación' });
+  ok(await confirm.isDisabled() && await page.getByText(/motivo de la reestratificación \(mínimo/).isVisible(), 'reestratificación (VF): no se confirma sin motivos');
+  await page.getByLabel(/Motivo de la elevación/).fill('Inicio de terapia no sustitutiva');
+  await page.getByLabel(/Motivo de la reestratificación/).fill('Cambio de tratamiento');
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'sin scroll horizontal en la estratificación');
   await page.screenshot({ path: '' + (process.env.SHOTS || '/tmp') + '/stratification.png', fullPage: true });
+  await confirm.click();
+  await page.getByText('Estratificación confirmada: Prioridad 1.').waitFor();
+  const sw = writes.filter(w => w.table === 'coag_stratifications').pop();
+  ok(sw.m === 'POST' && sw.body.status === 'completed' && sw.body.clinical_source_visit_id === 'v0' && Object.keys(sw.body.answers).length === 25
+    && sw.body.raised_priority === 1 && sw.body.restratification_reason === 'Cambio de tratamiento' && sw.body.suggestions.prophylaxis.value === 'yes'
+    && !('model_priority' in sw.body) && !('score' in sw.body),
+    'guardado: respuestas, propuestas con procedencia, origen V0, elevación y motivo; el cliente no envía puntuaciones');
+  ok(await page.getByRole('button', { name: 'Corregir' }).isVisible() && await page.locator('input[name="strat-route"]').first().isDisabled(), 'confirmada: bloqueada hasta «Corregir»');
+  await page.getByRole('button', { name: 'Corregir' }).click();
+  await pick('cv_risk', 1);
+  ok(await page.getByRole('button', { name: 'Guardar corrección' }).isDisabled(), 'corrección: exige motivo');
+  await page.getByLabel(/Motivo de la corrección/).fill('Revisado con la HCE');
+  await page.getByRole('button', { name: 'Guardar corrección' }).click();
+  await page.getByText('Estratificación confirmada: Prioridad 1.').waitFor();
+  const cw = writes.filter(w => w.table === 'coag_stratifications').pop();
+  ok(cw.m === 'PATCH' && cw.filter.includes('revision=eq.1') && cw.body.correction_reason === 'Revisado con la HCE' && cw.body.answers.cv_risk === 'no',
+    'corrección: con motivo y control de concurrencia (revisión cargada)');
+  await page.goto('http://127.0.0.1:4180/COAMO/#/patients/p1');
+  await page.getByText(/· Prioridad 1/).waitFor();
+  ok(true, 'ficha: prioridad asignada visible junto a la visita');
 
   await page.goto('http://127.0.0.1:4180/COAMO/#/dashboard');
   await page.getByText('Cumplimiento de cuestionarios').waitFor();

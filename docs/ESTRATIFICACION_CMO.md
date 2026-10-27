@@ -2,10 +2,15 @@
 
 Fuente («M»): SEFH, *Adaptación del Modelo de Atención Farmacéutica CMO al paciente con coagulopatías congénitas*, v2.0
 (documento aportado por el IP el 27/10/2026). Versión registrada: `CMO-COAG-SEFH-v2.0`.
+Decisiones del IP ya registradas: `docs/coamo/COAMO_CMO_MODEL_SPEC.md` §5 en `ramonmorillo/dermapex` (07/10/2026) y, el
+27/10/2026, estratificación en cualquier visita y respuestas guardadas como registro propio (opción a).
 Implementación: `src/domain/stratification.ts` (motor puro), `src/pages/StratificationPage.tsx` (`#/visits/:visitId/stratification`),
-pruebas `tests/stratification.test.ts` y pasos de E2E en `e2e/questionnaires.smoke.cjs`.
+servicio `src/services/stratificationService.ts`, pruebas `tests/stratification.test.ts` y pasos de E2E en
+`e2e/questionnaires.smoke.cjs`. BD: migración `20261027120000_coag_stratifications.sql` y `db-tests/80_coag_stratifications.sql`
+en `ramonmorillo/dermapex` (ver §6).
 
-**Estado: el cálculo funciona en cualquier visita realizada, pero NO se guarda** (falta la tabla en la BD; ver §6).
+**Estado:** cálculo y registro implementados y probados (frontend, BD local PostgreSQL 16 y E2E). **La migración no está
+aplicada en Supabase**: hasta aplicarla, la página muestra error al guardar.
 
 ## 1. Modelo tal como figura en M
 
@@ -31,18 +36,23 @@ pruebas `tests/stratification.test.ts` y pasos de E2E en `e2e/questionnaires.smo
 | Terapia avanzada sin responder | Nivel sin determinar | Si fuera «sí», sería P1 |
 | Calidad de vida | Se incluye (M v2.0 la lista) y se **avisa** si el nivel depende de ese punto | Los puntos de corte se validaron sin ella |
 | Elevación de nivel | Solo hacia arriba y con motivo obligatorio | M p. 19 |
+| Basal y reestratificaciones | La estratificación basal define la prioridad del análisis; las demás visitas son reestratificaciones con motivo obligatorio al confirmar | Spec §5.5 |
+| Adherencia y calidad de vida | Juicio Sí/No; la página muestra al lado el % de dispensaciones y el último EQ-5D-3L (no puntúan) | Spec §5.3-5.4 |
+
+Las reglas de opciones acumulables, gravedad de hemorragia literal y juicio profesional en adherencia y calidad de vida
+coinciden con las decisiones del IP del 07/10/2026 (spec §5.1-5.4).
 
 Verificación: el caso clínico 1 de M (pp. 63-65) da 2 + 18 + 9 + 2 = 31 → Prioridad 1 en el motor (prueba automática).
 
-## 3. Incoherencias o vacíos de M (a consultar con los autores; no suplidos con supuestos)
+## 3. Incoherencias o vacíos de M (para comunicar a los autores del modelo; para COAMO, resueltos como se indica)
 
 1. **Gravedad según tipo de hemorragia**: ingreso hospitalario = 2 puntos y manejo ambulatorio/domiciliario = 3. Es contraintuitivo
-   (más puntos al caso menos grave). Se implementa literal, con aviso en pantalla. El caso clínico 1 puntúa «manejo domiciliario (3)», coherente con la tabla.
+   (más puntos al caso menos grave). Se implementa literal por decisión del IP (spec §5.2), con aviso en pantalla. El caso clínico 1 puntúa «manejo domiciliario (3)», coherente con la tabla.
 2. **Número de hemorragias**: la tabla dice «más de 2 al año»; el caso clínico dice «2 o más». Se usa la tabla (> 2).
 3. **Patología articular degenerativa (2)** frente a **Estado/salud articular (3)**: M no aclara si un mismo daño articular puntúa en ambas.
    Se preguntan por separado y se avisa.
 4. **Falta de adherencia (4)** y **baja calidad de vida (1)**: M no da umbral (ni % de dispensación ni punto de corte de EQ-5D):
-   juicio profesional. VERITAS no interviene en el cálculo.
+   juicio profesional (spec §5.3-5.4). VERITAS no interviene en el cálculo.
 5. **Edad**: solo se registra la edad en la inclusión (sin fecha de nacimiento); en visitas posteriores la propuesta puede
    quedar desfasada en el límite de 50 años. El profesional confirma.
 6. **Otra terapia avanzada**: el protocolo solo distingue «terapia génica»; otras terapias avanzadas deben indicarse a mano.
@@ -74,8 +84,8 @@ del protocolo cubre solo parte de la definición de M. Si el profesional cambia 
 | Acceso | `hospital_access_difficulty` | Completa |
 | Conocimiento | `disease_knowledge` | Completa |
 
-Implicación: 7 preguntas del modelo no tienen variable en el protocolo/CRD. Si la estratificación es variable del estudio,
-conviene decidir si se registran como datos propios (tabla de §6) o se añaden al CRD clínico.
+Implicación: 7 preguntas del modelo no tienen variable en el protocolo/CRD. Decisión del IP (27/10/2026): se registran como
+datos propios de la estratificación (tabla de §6), no se amplía el CRD clínico.
 
 ## 5. Pruebas
 
@@ -84,11 +94,36 @@ datos ausentes (intervalo), excepciones, aviso de calidad de vida, elevación so
 E2E: enlace desde la ficha en todas las visitas realizadas, propuestas desde V0 en VF, 23 puntos → Prioridad 2 (cada 6 meses),
 elevación con motivo, sin desbordamiento a 1280 y 390 px.
 
-## 6. Pendiente: persistencia en la BD (repositorio canónico `ramonmorillo/dermapex`)
+## 6. Registro en la BD (`public.coag_stratifications`, repositorio canónico `ramonmorillo/dermapex`)
 
-Propuesta de tabla `public.coag_stratifications` (una por visita), con el mismo patrón que los cuestionarios:
-`visit_id` (FK, único), `model_version`, `answers jsonb` (`{id_pregunta: valor}`; ausente = sin responder),
-`suggestions jsonb` (propuesta y procedencia, para trazabilidad), puntuaciones por dimensión, `score`, `score_min`, `score_max`,
-`model_priority`, `basis`, `final_priority`, `raised_reason`, `revision`, autoría y fechas; puntuación y prioridad del modelo
-calculadas **por la BD** (espejo de `stratification.ts`, mismos ejemplos en `db-tests`), RLS por `can_access_visit`,
-`coag_app_gate` y auditoría. Visitas admitidas: cualquiera no anulada (decisión del IP). Sin la tabla, la página solo calcula.
+Una fila por visita (cualquier tipo, no anulada ni «no realizada»). Mismo patrón que los cuestionarios:
+
+| Columna | Contenido | Quién la escribe |
+|---|---|---|
+| `answers` | `{pregunta: opción}` (26 preguntas; ausente = sin responder) | Cliente (validado por la BD: pregunta aplicable al diagnóstico y opción existente) |
+| `suggestions` | `{pregunta: {value, from}}`: propuesta desde los datos clínicos y su procedencia | Cliente (validado) |
+| `clinical_source_visit_id` | V0/VF del mismo paciente, no posterior, de la que salen las propuestas | Cliente (validado) |
+| `raised_priority`, `raised_reason` | Elevación por criterio profesional (solo hacia arriba; motivo 5-300 caracteres) | Cliente (validado) |
+| `restratification_reason` | Obligatorio al confirmar fuera de la visita basal | Cliente (validado) |
+| `status` | `in_progress` (borrador) o `completed` (confirmada; exige nivel del modelo determinado) | Cliente |
+| `result`, `score`, `score_min`, `score_max`, `model_priority`, `final_priority`, `model_version` | Cálculo (`coag_private.stratification_result`, espejo de `stratification.ts`) | **BD** |
+| `revision`, `last_correction_reason/at/by`, autoría y fechas | Concurrencia, corrección con motivo de una confirmada, auditoría | **BD** |
+
+RLS: lectura/alta/edición según acceso a la visita; borrado solo coordinación; barrera `coag_app_gate`. Auditoría en
+`coag_audit_log` (valor anterior y nuevo, autor, centro, paciente, visita). La página compara el cálculo devuelto por la BD
+con el de pantalla y avisa si difieren.
+
+Pruebas BD (`db-tests/80_*`, 40 aserciones, PostgreSQL 16 local con `scripts/test-db.sh`; batería completa 10-80 superada):
+máximos 3/25/15/16, cortes inclusivos, caso clínico 1 (31 → P1), corrección (24 → P2), elevación, reestratificación con motivo,
+terapia avanzada, datos ausentes, menores, calidad de vida, aislamiento por centro y frente a DERMAPEX, auditoría.
+
+### Despliegue (pendiente de autorización)
+
+1. Revisar y fusionar el PR de `ramonmorillo/dermapex` (CI ejecuta `scripts/test-db.sh`).
+2. Copia de seguridad / punto de restauración del proyecto Supabase compartido.
+3. Aplicar `supabase/migrations/20261027120000_coag_stratifications.sql` (aditiva: una tabla y funciones `coag_*`; no toca DERMAPEX).
+4. Verificar: `select count(*) from public.coag_stratifications;` (0), RLS activa y política `coag_app_gate`.
+5. Fusionar el PR de COAMO. Sin la migración, la estratificación muestra error al guardar; el resto de la app no se afecta.
+
+Reversión (solo sin datos reales): `drop table public.coag_stratifications;` y las funciones `coag_private.strat_spec`,
+`strat_priority`, `stratification_result` y `enforce_stratification`.
