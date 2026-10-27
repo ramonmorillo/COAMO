@@ -61,8 +61,12 @@ describe('comparación V0–VF', () => {
     expect(c.items[0]).toMatchObject({ v0: 1, vf: 5, change: null });
     expect(c.metrics).toHaveLength(0);
   });
-  it('VERITAS-Pro: no disponible', () => {
-    expect(compareInstrument('VERITAS_PRO', null, null).warnings[0]).toMatch(/No se ha aportado/);
+  it('VERITAS-Pro: emparejado con ambos completados, sin dirección ni métricas', () => {
+    const c = compareInstrument('VERITAS_PRO', admin('v0', 'VERITAS_PRO', { q1: 2 }), admin('vf', 'VERITAS_PRO', { q1: 1 }));
+    expect(c.paired).toBe(true);
+    expect(c.items).toHaveLength(24);
+    expect(c.items[0]).toMatchObject({ v0: 2, vf: 1, v0Label: 'A menudo', vfLabel: 'Siempre', change: null });
+    expect(c.metrics).toHaveLength(0);
   });
   it('dirección ordinal', () => {
     expect(ordinalChange(2, 2, true)).toBe('same');
@@ -85,7 +89,7 @@ describe('exportación CSV', () => {
   const admins = [
     admin('v0', 'IEXPAC', { ...iex(3), q12: 2 }, {}, { q12: true, q13: false }),
     admin('vf', 'IEXPAC', iex(4), { administration_mode: 'assisted' }),
-    admin('v0', 'VERITAS_PRO', {}, { status: 'not_applicable', status_reason_code: 'source_document_unavailable', status_reason_detail: 'texto libre' }),
+    admin('v0', 'VERITAS_PRO', {}, { status: 'not_applicable', status_reason_code: 'regimen_mismatch', status_reason_detail: 'texto libre' }),
     admin('v0b', 'EQ5D3L', { mobility: 1, vas: 0 }, { status: 'in_progress' }),
   ];
   const bundle = buildExport(patients, visits, admins);
@@ -98,7 +102,7 @@ describe('exportación CSV', () => {
     const r = bundle.wide[0];
     expect(r).toMatchObject({ iexpac_status: 'completed', iexpac_q1: 3, iexpac_q12_applies: 1, iexpac_q13_applies: 0, iexpac_q12: 2, iexpac_sum: 33, iexpac_global: 5 });
     expect(r.iexpac_q14_applies).toBeNull();
-    expect(r).toMatchObject({ vpro_status: 'not_applicable', vpro_reason: 'source_document_unavailable' });
+    expect(r).toMatchObject({ vpro_status: 'not_applicable', vpro_reason: 'regimen_mismatch', vpro_q1: null, vpro_n_answered: 0 });
     expect(Object.values(r)).not.toContain('texto libre');
     expect(bundle.wide[2]).toMatchObject({ eq5d_status: 'in_progress', eq5d_vas: 0, eq5d_mobility: 1, eq5d_self_care: null, eq5d_profile: null });
   });

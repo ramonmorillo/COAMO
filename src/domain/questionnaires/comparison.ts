@@ -3,7 +3,7 @@
 //     EQ-5D) y solo con ambos completos. Δ = VF − V0.
 //   · Ítems ordinales (dimensiones EQ-5D, EVASAF): solo dirección del cambio según el sentido
 //     documentado de la escala; nunca se promedian ni se suman.
-//   · VERITAS-PRN: sin dirección (clave de puntuación no documentada); VERITAS-Pro: no disponible.
+//   · VERITAS-PRN y VERITAS-Pro: sin dirección (clave de puntuación no documentada).
 //   · Sin umbrales de mejoría/empeoramiento clínico.
 //   · Cambio de modalidad o versión entre V0 y VF: se avisa expresamente.
 
@@ -116,7 +116,7 @@ export function compareInstrument(
     if (af && !sf?.profile_complete) warnings.push('VF: perfil incompleto (falta alguna dimensión).');
     warnings.push('Índice de utilidad no calculado: no hay tarifa de valoración aprobada.');
   }
-  if (code === 'EVASAF' || code === 'VERITAS_PRN') {
+  if (code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
     paired = a0 !== null && af !== null;
   }
 

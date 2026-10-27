@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
-  EQ5D_VAS_SCALE, EQ5D_VAS_TEXT, INSTRUMENTS, INSTRUMENT_CODES, VERITAS_PRN_BLOCKS, instrumentItems, instrumentVersion, itemRange,
+  EQ5D_VAS_SCALE, EQ5D_VAS_TEXT, INSTRUMENTS, INSTRUMENT_CODES, VERITAS_PRN_BLOCKS, VERITAS_PRO_BLOCKS, instrumentItems, instrumentVersion, itemRange,
 } from '../src/domain/questionnaires/instruments';
 
 const norm = (text: string) => text.replace(/\s+/g, ' ').trim();
@@ -117,17 +117,36 @@ describe('VERITAS-PRN frente al documento', () => {
   });
 });
 
-describe('VERITAS-Pro', () => {
-  it('sin documento fuente: no se reproducen preguntas ni puntuación', () => {
-    expect(INSTRUMENTS.VERITAS_PRO.available).toBe(false);
-    expect(instrumentItems('VERITAS_PRO')).toHaveLength(0);
-    expect(instrumentVersion('VERITAS_PRO', 'self')).toBeNull();
+describe('VERITAS-Pro frente al documento', () => {
+  const doc = source('veritas_pro');
+  it('24 ítems en 6 bloques de 4, literales y en orden', () => {
+    expect(VERITAS_PRO_BLOCKS).toHaveLength(6);
+    const sections = INSTRUMENTS.VERITAS_PRO.sections;
+    expect(sections.map((s) => s.items.length)).toEqual([4, 4, 4, 4, 4, 4]);
+    expect(instrumentItems('VERITAS_PRO').map((i) => i.code)).toEqual(INSTRUMENTS.VERITAS_PRO.coreItemCodes);
+    expectInOrder(doc, [
+      'VERITAS-Pro',
+      ...INSTRUMENTS.VERITAS_PRO.instructions.default!,
+      ...sections.flatMap((s) => [s.title!, ...s.items.map((i) => `${i.number}. ${i.text}`)]),
+    ]);
+  });
+  it('opciones Siempre … Nunca en el orden del documento, códigos de posición 1-5 y rango 1-5', () => {
+    expectInOrder(doc, INSTRUMENTS.VERITAS_PRO.options!.map((o) => `☐ ${o.label}`));
+    expect(INSTRUMENTS.VERITAS_PRO.options!.map((o) => `${o.value}:${o.label}`)).toEqual(['1:Siempre', '2:A menudo', '3:A veces', '4:Rara vez', '5:Nunca']);
+    expect(itemRange('VERITAS_PRO', 'q24')).toEqual({ min: 1, max: 5 });
+  });
+  it('versión propia, distinta de VERITAS-PRN', () => {
+    expect(instrumentVersion('VERITAS_PRO', 'self')).toBe('VERITAS-Pro-ES-COAMO-2026-10-27');
+    expect(instrumentVersion('VERITAS_PRO', 'self')).not.toBe(instrumentVersion('VERITAS_PRN', 'self'));
   });
 });
 
 describe('catálogo', () => {
   it('los cinco códigos coinciden con los de la base de datos', () => {
     expect(INSTRUMENT_CODES).toEqual(['IEXPAC', 'EQ5D3L', 'EVASAF', 'VERITAS_PRN', 'VERITAS_PRO']);
+  });
+  it('todos los instrumentos tienen documento fuente', () => {
+    expect(INSTRUMENT_CODES.filter((c) => !INSTRUMENTS[c].available)).toEqual([]);
   });
   it('solo IEXPAC es variable principal', () => {
     expect(INSTRUMENT_CODES.filter((c) => INSTRUMENTS[c].primaryEndpoint)).toEqual(['IEXPAC']);

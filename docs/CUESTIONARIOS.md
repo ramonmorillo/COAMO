@@ -3,6 +3,7 @@
 Estado: implementado en frontend (este repositorio) y en el historial canónico de migraciones (`ramonmorillo/dermapex`,
 `supabase/migrations/20261026120000_coag_questionnaires.sql` + `db-tests/70_coag_questionnaires.sql`).
 **La migración NO está aplicada en Supabase**: ver §8.
+**VERITAS-Pro (27/10/2026)**: implementado en el frontend; la BD necesita una migración adicional (§9) antes de poder guardar respuestas.
 
 ## 1. Fuentes y clasificación de los documentos
 
@@ -13,9 +14,9 @@ Estado: implementado en frontend (este repositorio) y en el historial canónico 
 | EQ-5D-3L_administrado_por_profesional.docx | **Mismo instrumento**, modalidad entrevista | `EQ-5D-3L-ES-ES-v1.0-interviewer` (pie: «Spain (Spanish) v1.0») | Igual |
 | PROYECTO_EVASAF.docx | Encuesta validada de satisfacción (Monje-Agudo 2015) | `EVASAF-FarmHosp2015-10it` | Solo escala de ítem 1-5; **sin total** |
 | VERITAS-PRN.docx | Escala de adherencia (tratamiento a demanda) | `VERITAS-PRN-ES-COAMO-2026-10-14` | **No documentada**: sin puntuación |
-| VERITAS-Pro | — | — | **Documento no aportado** |
+| VERITAS-Pro.docx | Escala de adherencia (tratamiento profiláctico) | `VERITAS-Pro-ES-COAMO-2026-10-27` | **No documentada**: sin puntuación |
 
-Ninguno de los cinco documentos es un formulario de datos del estudio: son instrumentos. Los metadatos de la administración
+Ninguno de los seis documentos es un formulario de datos del estudio: son instrumentos. Los metadatos de la administración
 (fecha, modalidad, origen, estado, motivo) son variables técnicas de COAMO, no del instrumento.
 
 ## 2. Modelo de datos (`public.coag_questionnaire_administrations`)
@@ -58,10 +59,10 @@ sobrescribe. Los borradores viven en la BD (estado «en curso»); **nada clínic
 | EQ-5D-3L | Perfil de 5 dígitos (solo completo); EVA 0-100 independiente; 0 válido | Índice de utilidad (sin tarifa aprobada); suma de dimensiones |
 | EVASAF | Ítems 1-5 y completitud | Total o media (ni documento ni protocolo lo definen) |
 | VERITAS-PRN | Códigos de respuesta y completitud por bloque | Puntuación, ítems invertidos, dirección (clave no aportada) |
-| VERITAS-Pro | Solo estado (no aplicable / no realizado) | Todo (sin documento) |
+| VERITAS-Pro | Códigos de respuesta y completitud por bloque (Periodicidad, Dosis, Planificación, Recordatorio, Omisión, Comunicación) | Puntuación, ítems invertidos, dirección (clave no aportada) |
 
 Comparación V0–VF: Δ = VF − V0 solo para IEXPAC global/suma y EVA, y solo con ambas mediciones completas; dimensiones
-EQ-5D e ítems EVASAF/IEXPAC solo como dirección según el sentido documentado de la escala; VERITAS-PRN sin dirección.
+EQ-5D e ítems EVASAF/IEXPAC solo como dirección según el sentido documentado de la escala; VERITAS-PRN y VERITAS-Pro sin dirección.
 Se avisa si cambian modalidad, versión u origen del dato. Sin umbrales clínicos.
 
 ## 4. Pantallas
@@ -102,7 +103,10 @@ en todos los navegadores; importación efectiva en SPSS/R (solo formato).
 
 ## 7. Limitaciones y decisiones pendientes (no suplidas con supuestos)
 
-1. **VERITAS-Pro**: documento no aportado → no implementado. Necesario: documento, versión española y clave.
+1. **VERITAS-Pro**: documento aportado el 27/10/2026 e implementado (24 ítems literales, 6 bloques). Sin clave de puntuación,
+   sin pie de versión/copyright ni acreditación de versión española validada. **Incoherencia del documento**: el texto
+   introductorio es idéntico al de VERITAS-PRN («piense en un episodio de sangrado habitual…»), aunque los ítems tratan de
+   profilaxis; se reproduce literalmente hasta que el IP confirme el texto correcto. Pendiente la migración de BD (§9).
 2. **VERITAS-PRN y VERITAS-Pro no figuran en el protocolo revisado**, que cita **Morisky-Green** para adherencia (P p. 12).
    Confirmar enmienda/aprobación del CEIm y si Morisky-Green se mantiene (no implementado: sin formulario).
 3. **VERITAS-PRN**: sin clave de puntuación, sin acreditación de versión española validada ni de permiso de uso; aplicabilidad
@@ -133,3 +137,20 @@ Proyecto Supabase compartido `dermapex` (ref. `efjpjponblmdjlhmmiet`); última m
 
 Reversión (solo sin datos reales): `drop table public.coag_questionnaire_administrations;` y las funciones
 `coag_private.questionnaire_*` / `enforce_questionnaire_administration`.
+
+## 9. VERITAS-Pro: cambio pendiente en la base de datos (repositorio `ramonmorillo/dermapex`)
+
+La migración 20261026120000 trataba VERITAS-Pro como instrumento sin ítems. Hasta que se aplique una migración nueva, la BD
+rechazará cualquier respuesta de VERITAS-Pro (solo admitirá «no aplicable» / «no realizado»). La migración debe, como espejo
+exacto de `src/domain/questionnaires/instruments.ts` y `scoring.ts`:
+
+1. `coag_private.questionnaire_items()`: VERITAS_PRO con ítems `q1`–`q24`, rango 1-5 (código de posición, no puntuación).
+2. Versión fijada por la BD para VERITAS_PRO: `VERITAS-Pro-ES-COAMO-2026-10-27`.
+3. `coag_private.questionnaire_scores()`: mismo derivado que VERITAS-PRN, con bloques `routine` (1-4), `dosing` (5-8),
+   `planning` (9-12), `remembering` (13-16), `skipping` (17-20), `communicating` (21-24); `scores = null`,
+   `scoring_status = 'scoring_key_not_provided'`.
+4. `db-tests/70_*`: mismos ejemplos que `tests/questionnaireScoring.test.ts` (bloque «VERITAS-Pro»).
+
+Desplegar la migración **antes** de fusionar este cambio del frontend (o, como mínimo, a la vez). Los registros previos de
+VERITAS-Pro como «no aplicable» con motivo `source_document_unavailable` siguen siendo válidos; revisar si deben reabrirse.
+La exportación pasa a `coamo-q-export-2` (nuevas columnas `vpro_q1`–`vpro_q24` y `vpro_n_answered`).

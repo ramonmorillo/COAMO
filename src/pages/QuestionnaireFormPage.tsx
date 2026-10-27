@@ -300,7 +300,7 @@ function QuestionnaireForm({ visitId, instrument }: { visitId: string; instrumen
             {eq5d ? (
               <>Perfil: <strong>{eq5d.profile ?? `incompleto (${eq5d.dimensions_answered}/5)`}</strong> · EVA: <strong>{eq5d.vas ?? '—'}</strong> · Índice de utilidad: no calculado (sin tarifa aprobada)</>
             ) : null}
-            {code === 'EVASAF' || code === 'VERITAS_PRN' ? <>{def.scoringSummary}</> : null}
+            {code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO' ? <>{def.scoringSummary}</> : null}
             {code === 'IEXPAC' ? <p className="coamo-field-hint" style={{ marginTop: 'var(--sp-2)' }}>{def.scoringSummary}</p> : null}
           </div>
         </section>

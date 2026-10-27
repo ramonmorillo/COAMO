@@ -129,10 +129,12 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   ok(await page.getByText(/el régimen no es a demanda/).isVisible(), 'VERITAS-PRN: aviso de aplicabilidad por régimen en profilaxis (sin imponer)');
   ok(await page.locator('input[type=radio][name^="item-q"]').count() === 120, 'VERITAS-PRN: 24 ítems × 5 opciones');
   await page.goto('http://127.0.0.1:4180/COAMO/#/visits/v0/questionnaires/VERITAS_PRO');
-  await page.getByText('Instrumento no disponible').waitFor();
-  ok(await page.locator('input[name^="item-"]').count() === 0, 'VERITAS-Pro: sin preguntas (documento no aportado)');
+  await page.getByRole('heading', { name: 'VERITAS-Pro' }).waitFor();
+  ok(await page.locator('input[type=radio][name^="item-q"]').count() === 120, 'VERITAS-Pro: 24 ítems × 5 opciones');
+  ok(await page.getByText('Realizo las infusiones de profilaxis los días programados.').isVisible(), 'VERITAS-Pro: ítem 1 literal del documento');
+  ok(await page.getByText(/Régimen en profilaxis registrado/).isVisible(), 'VERITAS-Pro: régimen en profilaxis reconocido');
   await page.locator('fieldset label', { hasText: 'Estado' }).locator('select').selectOption('not_applicable');
-  await page.locator('fieldset label', { hasText: 'Motivo' }).locator('select').selectOption('source_document_unavailable');
+  await page.locator('fieldset label', { hasText: 'Motivo' }).locator('select').selectOption('regimen_mismatch');
   await page.getByRole('button', { name: 'Registrar como no aplicable' }).click();
   await page.getByText(/Guardado: no aplicable/).waitFor();
   ok(true, 'VERITAS-Pro registrado como no aplicable con motivo');

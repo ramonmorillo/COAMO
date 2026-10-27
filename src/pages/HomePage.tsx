@@ -83,13 +83,13 @@ export function HomePage() {
         <h2 id="status-title">Estado de la herramienta</h2>
         <Notice tone="info" title="Disponible: pacientes, inclusión, visitas, datos clínicos y cuestionarios V0/VF">
           Alta seudonimizada, elegibilidad y consentimiento, visitas basal, de seguimiento y final (12 meses ±1 mes),
-          contactos, variables clínicas y de tratamiento del protocolo, y cuestionarios IEXPAC, EQ-5D-3L, EVASAF y VERITAS-PRN
+          contactos, variables clínicas y de tratamiento del protocolo, y cuestionarios IEXPAC, EQ-5D-3L, EVASAF, VERITAS-PRN y VERITAS-Pro
           con evolución V0–VF y exportación. <Link to="/patients">Ir a pacientes</Link>
         </Notice>
         <p>En preparación:</p>
         <ul className="coamo-pending-list">
           <li>estratificación CMO de coagulopatías congénitas (SEFH 2026) y actuaciones de atención farmacéutica por prioridad;</li>
-          <li>Morisky-Green (citado en el protocolo; no se ha aportado su formulario) y VERITAS-Pro (documento fuente no aportado).</li>
+          <li>Morisky-Green (citado en el protocolo; no se ha aportado su formulario).</li>
         </ul>
       </section>
     </div>

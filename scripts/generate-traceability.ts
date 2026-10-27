@@ -6,7 +6,7 @@ import { INSTRUMENTS, INSTRUMENT_CODES, instrumentItems, optionsFor } from '../s
 const PREFIX = { IEXPAC: 'iexpac', EQ5D3L: 'eq5d', EVASAF: 'evasaf', VERITAS_PRN: 'vprn', VERITAS_PRO: 'vpro' } as const;
 const DOC = {
   IEXPAC: 'CUESTIONARIO_IEXPAC.docx', EQ5D3L: 'EQ-5D-3L_autoadministrado.docx (v2.0) / EQ-5D-3L_administrado_por_profesional.docx (v1.0)',
-  EVASAF: 'PROYECTO_EVASAF.docx', VERITAS_PRN: 'VERITAS-PRN.docx', VERITAS_PRO: '— (no aportado)',
+  EVASAF: 'PROYECTO_EVASAF.docx', VERITAS_PRN: 'VERITAS-PRN.docx', VERITAS_PRO: 'VERITAS-Pro.docx',
 } as const;
 const esc = (t: string) => t.replace(/\|/g, '\\|');
 const lines: string[] = [
