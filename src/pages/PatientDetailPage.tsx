@@ -292,8 +292,11 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
                     ) : VISIT_STATUS_LABEL[v.status]}
                   </td>
                   <td>
-                    {(v.visit_type === 'baseline' || v.visit_type === 'final') && v.status === 'completed' ? (
-                      <Link to={`/visits/${v.id}/clinical`}>Datos clínicos</Link>
+                    {v.status === 'completed' ? (
+                      <>
+                        {v.visit_type === 'baseline' || v.visit_type === 'final' ? <><Link to={`/visits/${v.id}/clinical`}>Datos clínicos</Link>{' · '}</> : null}
+                        <Link to={`/visits/${v.id}/stratification`}>Estratificación CMO</Link>
+                      </>
                     ) : '—'}
                   </td>
                 </tr>

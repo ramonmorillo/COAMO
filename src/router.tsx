@@ -28,6 +28,7 @@ export const router = createHashRouter([
       // Cuestionarios: carga bajo demanda (no penaliza el arranque de la app).
       { path: '/patients/:id/questionnaires', lazy: async () => ({ Component: (await import('./pages/QuestionnaireEvolutionPage')).QuestionnaireEvolutionPage }) },
       { path: '/visits/:visitId/clinical', element: <ClinicalAssessmentPage /> },
+      { path: '/visits/:visitId/stratification', lazy: async () => ({ Component: (await import('./pages/StratificationPage')).StratificationPage }) },
       { path: '/visits/:visitId/questionnaires/:instrument', lazy: async () => ({ Component: (await import('./pages/QuestionnaireFormPage')).QuestionnaireFormPage }) },
       { path: '/questionnaires/export', lazy: async () => ({ Component: (await import('./pages/QuestionnaireExportPage')).QuestionnaireExportPage }) },
     ],

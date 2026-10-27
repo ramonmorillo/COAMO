@@ -88,7 +88,7 @@ export function HomePage() {
         </Notice>
         <p>En preparación:</p>
         <ul className="coamo-pending-list">
-          <li>estratificación CMO de coagulopatías congénitas (SEFH 2026) y actuaciones de atención farmacéutica por prioridad;</li>
+          <li>registro de la estratificación CMO (el cálculo ya está disponible en cada visita realizada, pero no se guarda hasta aplicar la migración) y actuaciones de atención farmacéutica por prioridad;</li>
           <li>Morisky-Green (citado en el protocolo; no se ha aportado su formulario).</li>
         </ul>
       </section>

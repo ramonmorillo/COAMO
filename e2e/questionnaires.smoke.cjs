@@ -166,6 +166,28 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   const head = lines[0].split(','); const v0 = lines[1].split(',');
   ok(v0[head.indexOf('iexpac_global')] === '9.0909' && v0[head.indexOf('iexpac_q12')] === '2' && v0[head.indexOf('vpro_status')] === 'not_applicable', 'CSV: global corregido 9,0909 (suma 51), ítem condicionado y estado VERITAS-Pro');
 
+  // Estratificación CMO (modelo SEFH v2.0): VF sin datos clínicos propios → propuestas desde V0, cálculo y elevación.
+  await page.goto('http://127.0.0.1:4180/COAMO/#/patients/p1');
+  await page.getByRole('link', { name: 'Estratificación CMO' }).first().waitFor();
+  ok(await page.getByRole('link', { name: 'Estratificación CMO' }).count() === 2, 'ficha: estratificación disponible en cada visita realizada');
+  await page.goto('http://127.0.0.1:4180/COAMO/#/visits/vf/stratification');
+  await page.getByRole('heading', { name: /Estratificación CMO/ }).waitFor();
+  ok(await page.getByText(/esta visita no tiene datos clínicos propios/).isVisible(), 'estratificación: propuestas tomadas de V0 y señaladas');
+  ok(await page.getByText(/sin determinar/).isVisible(), 'estratificación: sin respuestas suficientes no asigna nivel');
+  const pick = (id, index) => page.locator(`input[name="strat-${id}"]`).nth(index).check();
+  const plan = { hemophilia_severity: 2, route: 2, non_adherence: 0, limited_knowledge: 0, cv_risk: 0, obesity: 0, spontaneous_bleeds_gt2: 0, pain: 0, bleeding_management: 0 };
+  const yesNo = ['inhibitors', 'joint_status', 'comorbidity', 'degenerative_joint', 'psychological', 'advanced_therapy', 'dose_change', 'extra_doses',
+    'home_dispensing', 'socioeconomic', 'intense_activity', 'access_difficulty', 'transition', 'low_qol'];
+  for (const id of yesNo) await pick(id, 1);
+  for (const [id, index] of Object.entries(plan)) await pick(id, index);
+  const resultText = await page.locator('#strat-result').locator('..').innerText();
+  ok(/Puntuación: 23/.test(resultText) && /Prioridad 2/.test(resultText) && /cada 6 meses/.test(resultText), 'estratificación: 23 puntos → Prioridad 2, valoración cada 6 meses');
+  await page.getByLabel(/Elevar el nivel/).selectOption('1');
+  ok(await page.getByText('Indique el motivo de la elevación de nivel.').isVisible(), 'elevación de nivel: exige motivo');
+  ok(await page.getByText(/elevado desde Prioridad 2/).isVisible(), 'elevación de nivel: Prioridad 1 con nivel del modelo visible');
+  ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'sin scroll horizontal en la estratificación');
+  await page.screenshot({ path: '' + (process.env.SHOTS || '/tmp') + '/stratification.png', fullPage: true });
+
   await page.goto('http://127.0.0.1:4180/COAMO/#/dashboard');
   await page.getByText('Cumplimiento de cuestionarios').waitFor();
   ok(await page.getByText('Pacientes con V0 completa').isVisible(), 'cuadro de mando: indicadores de cumplimiento');
