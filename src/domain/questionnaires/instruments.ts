@@ -1,11 +1,11 @@
 // Catálogo de instrumentos de las visitas basal (V0) y final (VF). Textos transcritos literalmente de
-// los documentos Word aportados por el IP (14/10/2026); trazabilidad ítem a ítem en
+// los documentos Word aportados por el IP (14/10/2026; VERITAS-Pro, 27/10/2026); trazabilidad ítem a ítem en
 // docs/CUESTIONARIOS_TRAZABILIDAD.md. Los códigos de ítem coinciden con
 // coag_private.questionnaire_items() (migración 20261026120000 del historial canónico, DERMAPEX).
 //
 // Regla: el valor guardado es el CÓDIGO de la opción en el orden del documento. Solo en IEXPAC
 // (protocolo p. 10) y EVASAF (documento: 1 muy deficiente – 5 excelente) coincide con el valor de la
-// escala. En VERITAS-PRN es un código de posición (1 = Siempre … 5 = Nunca), no una puntuación.
+// escala. En VERITAS-PRN y VERITAS-Pro es un código de posición (1 = Siempre … 5 = Nunca), no una puntuación.
 
 export type InstrumentCode = 'IEXPAC' | 'EQ5D3L' | 'EVASAF' | 'VERITAS_PRN' | 'VERITAS_PRO';
 export type AdministrationMode = 'self' | 'assisted' | 'interviewer';
@@ -252,6 +252,48 @@ const VERITAS_PRN_INTRO = [
   'Nunca: en ningún caso, el 0 % de las veces.',
 ];
 
+// ── VERITAS-Pro ─────────────────────────────────────────────────────────────
+// Misma escala y mismo texto introductorio que VERITAS-PRN en el documento aportado (véase limitaciones).
+
+export const VERITAS_PRO_BLOCKS: Array<{ id: string; title: string; texts: string[] }> = [
+  { id: 'routine', title: 'Periodicidad', texts: [
+    'Realizo las infusiones de profilaxis los días programados.',
+    'Me administro las infusiones el número de veces por semana recomendado.',
+    'Realizo las infusiones de profilaxis por la mañana, tal como se recomienda.',
+    'Me administro las infusiones según el calendario proporcionado por el centro de tratamiento.',
+  ] },
+  { id: 'dosing', title: 'Dosis', texts: [
+    'Utilizo la dosis recomendada por el médico para las infusiones.',
+    'Me administro una dosis inferior a la prescrita.',
+    'Aumento o disminuyo la dosis sin llamar al centro de tratamiento.',
+    'Utilizo el número correcto de envases de factor para completar la dosis recomendada.',
+  ] },
+  { id: 'planning', title: 'Planificación', texts: [
+    'Planifico con antelación para disponer de suficiente factor de coagulación en casa.',
+    'Controlo cuidadosamente cuánto factor y cuántos materiales tengo en casa.',
+    'Me quedo sin factor o sin materiales antes de pedir más.',
+    'Tengo un sistema para llevar el control del factor y los materiales que tengo en casa.',
+  ] },
+  { id: 'remembering', title: 'Recordatorio', texts: [
+    'Olvido administrarme las infusiones de profilaxis.',
+    'Me resulta difícil acordarme de realizar la profilaxis.',
+    'Recuerdo administrarme las infusiones según el calendario prescrito por el centro de tratamiento.',
+    'Dejo de administrarme infusiones recomendadas porque se me olvidan.',
+  ] },
+  { id: 'skipping', title: 'Omisión de infusiones', texts: [
+    'Me salto infusiones de profilaxis.',
+    'Decido administrarme infusiones con menos frecuencia de la prescrita.',
+    'Si no me viene bien administrarme una infusión, me la salto ese día.',
+    'No me administro infusiones recomendadas porque decido saltármelas.',
+  ] },
+  { id: 'communicating', title: 'Comunicación', texts: [
+    'Llamo al centro de tratamiento cuando tengo preguntas sobre la hemofilia o su tratamiento.',
+    'Llamo al centro de tratamiento cuando tengo preocupaciones de salud relacionadas con la hemofilia o cuando se producen cambios.',
+    'Tomo decisiones sobre el tratamiento por mi cuenta en lugar de llamar al centro de hemofilia.',
+    'Llamo al centro de tratamiento antes de intervenciones médicas, como extracciones dentales, colonoscopias, visitas a urgencias o ingresos hospitalarios.',
+  ] },
+];
+
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => `q${from + i}`);
 
 // ── Catálogo ────────────────────────────────────────────────────────────────
@@ -371,17 +413,26 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     code: 'VERITAS_PRO',
     shortName: 'VERITAS-Pro',
     name: 'VERITAS-Pro',
-    construct: 'Adherencia al tratamiento profiláctico en hemofilia.',
-    source: 'Documento fuente NO aportado.',
-    available: false,
-    unavailableReason: 'No se ha aportado el documento de VERITAS-Pro: no se reproducen preguntas ni puntuaciones. Solo puede registrarse como «no aplicable» o «no realizado».',
+    construct: 'Adherencia al tratamiento profiláctico en hemofilia (6 bloques de 4 ítems; referencia a los últimos tres meses).',
+    source: 'Documento «VERITAS-Pro» (IP, 27/10/2026).',
+    available: true,
     modes: ['self', 'assisted', 'interviewer'],
-    instructions: {},
-    sections: [],
-    coreItemCodes: [],
-    scoringSummary: 'No disponible.',
-    directionNote: 'No disponible.',
-    limitations: ['Pendiente de recibir el documento, la versión española y la clave de puntuación.'],
+    instructions: { default: VERITAS_PRN_INTRO },
+    options: VERITAS_OPTIONS,
+    sections: VERITAS_PRO_BLOCKS.map((block, b) => ({
+      id: block.id,
+      title: block.title,
+      items: block.texts.map((text, i) => ({ code: `q${b * 4 + i + 1}`, number: b * 4 + i + 1, text })),
+    })),
+    coreItemCodes: range(1, 24),
+    scoringSummary: 'Sin puntuación: el documento no incluye clave de puntuación, ítems invertidos, rangos ni regla de datos ausentes. Se registran los códigos de respuesta (1 = Siempre … 5 = Nunca).',
+    directionNote: 'No se interpreta la dirección del cambio: hay ítems redactados en sentido opuesto (p. ej., 6, 7, 11, 13, 14, 16-20, 23) y la clave no está documentada.',
+    limitations: [
+      'No figura en el protocolo COAMO revisado (que cita Morisky-Green para adherencia): confirmar enmienda/aprobación.',
+      'El documento no acredita que sea una versión española validada ni el permiso de uso; no incluye pie de versión ni copyright.',
+      'El texto introductorio del documento es idéntico al de VERITAS-PRN (pide pensar en un episodio de sangrado habitual), aunque los ítems se refieren a la profilaxis: se reproduce tal cual; confirmar con el IP.',
+      'Aplicable en principio a régimen de profilaxis; texto centrado en hemofilia e infusiones de factor: aplicabilidad en EVW y terapias no sustitutivas (p. ej., subcutáneas), pendiente del IP.',
+    ],
   },
 };
 
@@ -400,7 +451,7 @@ export function instrumentVersion(code: InstrumentCode, mode: AdministrationMode
     case 'EQ5D3L': return mode === 'self' ? 'EQ-5D-3L-ES-ES-v2.0-self' : mode === 'interviewer' ? 'EQ-5D-3L-ES-ES-v1.0-interviewer' : null;
     case 'EVASAF': return 'EVASAF-FarmHosp2015-10it';
     case 'VERITAS_PRN': return 'VERITAS-PRN-ES-COAMO-2026-10-14';
-    case 'VERITAS_PRO': return null;
+    case 'VERITAS_PRO': return 'VERITAS-Pro-ES-COAMO-2026-10-27';
   }
 }
 

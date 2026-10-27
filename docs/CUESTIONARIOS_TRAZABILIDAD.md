@@ -104,11 +104,34 @@ La literalidad de cada texto frente al .docx se comprueba en `tests/questionnair
 
 ## VERITAS-Pro
 
-- Documento: — (no aportado)
-- Fuente: Documento fuente NO aportado.
-- Puntuación: No disponible.
-- Dirección: No disponible.
+- Documento: VERITAS-Pro.docx
+- Fuente: Documento «VERITAS-Pro» (IP, 27/10/2026).
+- Puntuación: Sin puntuación: el documento no incluye clave de puntuación, ítems invertidos, rangos ni regla de datos ausentes. Se registran los códigos de respuesta (1 = Siempre … 5 = Nunca).
+- Dirección: No se interpreta la dirección del cambio: hay ítems redactados en sentido opuesto (p. ej., 6, 7, 11, 13, 14, 16-20, 23) y la clave no está documentada.
 
-> No se ha aportado el documento de VERITAS-Pro: no se reproducen preguntas ni puntuaciones. Solo puede registrarse como «no aplicable» o «no realizado».
-
-Variables: `vpro_status`, `vpro_reason`.
+| Sección | Nº | Texto del documento | Opciones (código = etiqueta) | Clave BD | Columna CSV |
+|---|---|---|---|---|---|
+| Periodicidad | 1 | Realizo las infusiones de profilaxis los días programados. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q1` | `vpro_q1` |
+| Periodicidad | 2 | Me administro las infusiones el número de veces por semana recomendado. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q2` | `vpro_q2` |
+| Periodicidad | 3 | Realizo las infusiones de profilaxis por la mañana, tal como se recomienda. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q3` | `vpro_q3` |
+| Periodicidad | 4 | Me administro las infusiones según el calendario proporcionado por el centro de tratamiento. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q4` | `vpro_q4` |
+| Dosis | 5 | Utilizo la dosis recomendada por el médico para las infusiones. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q5` | `vpro_q5` |
+| Dosis | 6 | Me administro una dosis inferior a la prescrita. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q6` | `vpro_q6` |
+| Dosis | 7 | Aumento o disminuyo la dosis sin llamar al centro de tratamiento. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q7` | `vpro_q7` |
+| Dosis | 8 | Utilizo el número correcto de envases de factor para completar la dosis recomendada. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q8` | `vpro_q8` |
+| Planificación | 9 | Planifico con antelación para disponer de suficiente factor de coagulación en casa. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q9` | `vpro_q9` |
+| Planificación | 10 | Controlo cuidadosamente cuánto factor y cuántos materiales tengo en casa. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q10` | `vpro_q10` |
+| Planificación | 11 | Me quedo sin factor o sin materiales antes de pedir más. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q11` | `vpro_q11` |
+| Planificación | 12 | Tengo un sistema para llevar el control del factor y los materiales que tengo en casa. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q12` | `vpro_q12` |
+| Recordatorio | 13 | Olvido administrarme las infusiones de profilaxis. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q13` | `vpro_q13` |
+| Recordatorio | 14 | Me resulta difícil acordarme de realizar la profilaxis. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q14` | `vpro_q14` |
+| Recordatorio | 15 | Recuerdo administrarme las infusiones según el calendario prescrito por el centro de tratamiento. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q15` | `vpro_q15` |
+| Recordatorio | 16 | Dejo de administrarme infusiones recomendadas porque se me olvidan. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q16` | `vpro_q16` |
+| Omisión de infusiones | 17 | Me salto infusiones de profilaxis. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q17` | `vpro_q17` |
+| Omisión de infusiones | 18 | Decido administrarme infusiones con menos frecuencia de la prescrita. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q18` | `vpro_q18` |
+| Omisión de infusiones | 19 | Si no me viene bien administrarme una infusión, me la salto ese día. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q19` | `vpro_q19` |
+| Omisión de infusiones | 20 | No me administro infusiones recomendadas porque decido saltármelas. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q20` | `vpro_q20` |
+| Comunicación | 21 | Llamo al centro de tratamiento cuando tengo preguntas sobre la hemofilia o su tratamiento. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q21` | `vpro_q21` |
+| Comunicación | 22 | Llamo al centro de tratamiento cuando tengo preocupaciones de salud relacionadas con la hemofilia o cuando se producen cambios. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q22` | `vpro_q22` |
+| Comunicación | 23 | Tomo decisiones sobre el tratamiento por mi cuenta en lugar de llamar al centro de hemofilia. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q23` | `vpro_q23` |
+| Comunicación | 24 | Llamo al centro de tratamiento antes de intervenciones médicas, como extracciones dentales, colonoscopias, visitas a urgencias o ingresos hospitalarios. | 1=Siempre; 2=A menudo; 3=A veces; 4=Rara vez; 5=Nunca | `q24` | `vpro_q24` |

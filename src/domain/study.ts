@@ -127,7 +127,7 @@ export function inclusionGaps(record: InclusionRecord, patient: { age_at_inclusi
   return gaps;
 }
 
-// ── Seguimiento según prioridad (modelo CMO, p. 18; protocolo p. 15) ────────
+// ── Seguimiento según prioridad (modelo CMO, pp. 18-19; protocolo p. 15) ────
 
 export const FOLLOWUP_BY_PRIORITY: Record<1 | 2 | 3, string> = {
   1: 'Valoración cada mes',

@@ -168,7 +168,7 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
   visitIds: Partial<Record<StudyVisit, string>>;
 }) {
   const def = INSTRUMENTS[code];
-  const showDirection = code !== 'VERITAS_PRN';
+  const showDirection = code !== 'VERITAS_PRN' && code !== 'VERITAS_PRO';
   return (
     <section className={`card coamo-break${def.primaryEndpoint ? ' coamo-q-primary-card' : ''}`} aria-labelledby={`evo-${code}`}>
       <h2 id={`evo-${code}`}>
@@ -232,7 +232,7 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
           {code === 'IEXPAC' ? (
             <p className="coamo-field-hint">Ítems 12-15 condicionados: se muestran si se cumplió su condición; no entran en la puntuación global.</p>
           ) : null}
-          {code === 'VERITAS_PRN' ? (
+          {code === 'VERITAS_PRN' || code === 'VERITAS_PRO' ? (
             <p className="coamo-field-hint">Códigos de respuesta (1 = Siempre … 5 = Nunca). Sin dirección del cambio: la clave de puntuación no está documentada.</p>
           ) : null}
         </details>

@@ -10,7 +10,7 @@ import { INSTRUMENTS, instrumentItems, type InstrumentCode } from './instruments
 import type { QuestionnaireAdministration, StudyVisit } from './administration';
 import type { Eq5dScores, IexpacScores } from './scoring';
 
-export const EXPORT_SCHEMA_VERSION = 'coamo-q-export-1';
+export const EXPORT_SCHEMA_VERSION = 'coamo-q-export-2';
 
 export type CsvFormat = 'standard' | 'excel_es';
 
@@ -46,7 +46,7 @@ function adminColumns(code: InstrumentCode): Column[] {
       cols.push({ name: `${p}_${item.code}_applies`, label: `IEXPAC ítem ${item.number}: se cumple la condición`, type: 'integer',
         values: '1 = sí; 0 = no; vacío = no registrado', source: 'Documento IEXPAC' });
     }
-    const values = item.kind === 'vas' ? '0-100' : code === 'VERITAS_PRN'
+    const values = item.kind === 'vas' ? '0-100' : code === 'VERITAS_PRN' || code === 'VERITAS_PRO'
       ? '1 Siempre, 2 A menudo, 3 A veces, 4 Rara vez, 5 Nunca (CÓDIGO, no puntuación)'
       : code === 'EQ5D3L' ? '1-3 (1 = sin problemas)' : code === 'IEXPAC' ? '1 Nunca … 5 Siempre' : '1 muy deficiente … 5 excelente';
     cols.push({ name: `${p}_${item.code}`, label: `${def.shortName} ${item.number ? `ítem ${item.number}` : item.title}: ${item.title ?? item.text}`.slice(0, 200),
@@ -65,7 +65,7 @@ function adminColumns(code: InstrumentCode): Column[] {
       { name: 'eq5d_profile', label: 'EQ-5D-3L: perfil de 5 dígitos (solo si completo; texto)', type: 'text', values: '11111-33333', source: 'Documento EQ-5D-3L' },
     );
   }
-  if (code === 'EVASAF' || code === 'VERITAS_PRN') {
+  if (code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
     cols.push({ name: `${p}_n_answered`, label: `${def.shortName}: ítems respondidos`, type: 'integer', values: `0-${def.coreItemCodes.length}`, source: 'Derivado' });
   }
   return cols;
@@ -157,7 +157,7 @@ function adminCells(code: InstrumentCode, admin: QuestionnaireAdministration | u
     row.eq5d_n_dims = s.dimensions_answered ?? null;
     row.eq5d_profile = s.profile_complete ? s.profile : null;
   }
-  if (code === 'EVASAF' || code === 'VERITAS_PRN') {
+  if (code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
     row[`${p}_n_answered`] = (admin.scores as { items_answered?: number }).items_answered ?? null;
   }
   return row;

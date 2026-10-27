@@ -98,9 +98,6 @@ export function applicabilityHints(
   context: { diagnosis: Diagnosis; treatmentRegimen: string | null; treatmentType: string | null },
 ): ApplicabilityHint[] {
   const hints: ApplicabilityHint[] = [];
-  if (code === 'VERITAS_PRO') {
-    hints.push({ tone: 'warning', text: INSTRUMENTS.VERITAS_PRO.unavailableReason! });
-  }
   if (code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
     const target = code === 'VERITAS_PRN' ? 'on_demand' : 'prophylaxis';
     const targetLabel = code === 'VERITAS_PRN' ? 'a demanda' : 'en profilaxis';

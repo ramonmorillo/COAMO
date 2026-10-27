@@ -2,7 +2,7 @@
 // fuente de verdad de lo guardado; esto sirve para la vista previa mientras se cumplimenta). Ambos se
 // prueban con los mismos ejemplos (tests/questionnaireScoring.test.ts y db-tests/70_*).
 
-import { EQ5D_DIMENSIONS, VERITAS_PRN_BLOCKS, type InstrumentCode } from './instruments';
+import { EQ5D_DIMENSIONS, VERITAS_PRN_BLOCKS, VERITAS_PRO_BLOCKS, type InstrumentCode } from './instruments';
 
 export type Responses = Record<string, number>;
 export type Applicability = Record<string, boolean>;
@@ -28,7 +28,7 @@ export type Eq5dScores = {
 
 export type EvasafScores = { items_expected: 10; items_answered: number; complete: boolean; summary_score: null; summary_score_status: 'no_approved_rule' };
 
-export type VeritasPrnScores = {
+export type VeritasScores = {
   items_expected: 24;
   items_answered: number;
   complete: boolean;
@@ -37,7 +37,11 @@ export type VeritasPrnScores = {
   scoring_status: 'scoring_key_not_provided';
 };
 
-export type InstrumentScores = IexpacScores | Eq5dScores | EvasafScores | VeritasPrnScores | Record<string, never>;
+/** VERITAS-PRN y VERITAS-Pro comparten estructura (6 bloques × 4 ítems) y la misma ausencia de clave. */
+export type VeritasPrnScores = VeritasScores;
+export type VeritasProScores = VeritasScores;
+
+export type InstrumentScores = IexpacScores | Eq5dScores | EvasafScores | VeritasScores | Record<string, never>;
 
 const has = (responses: Responses, key: string) => Object.prototype.hasOwnProperty.call(responses, key) && Number.isInteger(responses[key]);
 const q = (n: number) => `q${n}`;
@@ -77,9 +81,9 @@ export function evasafScores(responses: Responses): EvasafScores {
   return { items_expected: 10, items_answered: answered, complete: answered === 10, summary_score: null, summary_score_status: 'no_approved_rule' };
 }
 
-export function veritasPrnScores(responses: Responses): VeritasPrnScores {
+function veritasScores(blockDefs: Array<{ id: string }>, responses: Responses): VeritasScores {
   const blocks: Record<string, number> = {};
-  VERITAS_PRN_BLOCKS.forEach((block, b) => {
+  blockDefs.forEach((block, b) => {
     blocks[block.id] = seq(b * 4 + 1, b * 4 + 4).filter((n) => has(responses, q(n))).length;
   });
   const answered = seq(1, 24).filter((n) => has(responses, q(n))).length;
@@ -93,13 +97,16 @@ export function veritasPrnScores(responses: Responses): VeritasPrnScores {
   };
 }
 
+export const veritasPrnScores = (responses: Responses): VeritasPrnScores => veritasScores(VERITAS_PRN_BLOCKS, responses);
+export const veritasProScores = (responses: Responses): VeritasProScores => veritasScores(VERITAS_PRO_BLOCKS, responses);
+
 export function computeScores(code: InstrumentCode, responses: Responses, applicability: Applicability = {}): InstrumentScores {
   switch (code) {
     case 'IEXPAC': return iexpacScores(responses, applicability);
     case 'EQ5D3L': return eq5dScores(responses);
     case 'EVASAF': return evasafScores(responses);
     case 'VERITAS_PRN': return veritasPrnScores(responses);
-    case 'VERITAS_PRO': return {};
+    case 'VERITAS_PRO': return veritasProScores(responses);
   }
 }
 
@@ -124,8 +131,8 @@ export function isComplete(code: InstrumentCode, scores: InstrumentScores): bool
     case 'IEXPAC': return (scores as IexpacScores).complete === true;
     case 'EQ5D3L': return (scores as Eq5dScores).profile_complete === true && (scores as Eq5dScores).vas !== null;
     case 'EVASAF': return (scores as EvasafScores).complete === true;
-    case 'VERITAS_PRN': return (scores as VeritasPrnScores).complete === true;
-    case 'VERITAS_PRO': return false;
+    case 'VERITAS_PRN':
+    case 'VERITAS_PRO': return (scores as VeritasScores).complete === true;
   }
 }
 

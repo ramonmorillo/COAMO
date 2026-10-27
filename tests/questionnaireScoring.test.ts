@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { applicabilityHints, buildAdministrationPayload, isResolved, validateDraft, type DraftState } from '../src/domain/questionnaires/administration';
-import { computeScores, eq5dScores, evasafScores, formatScore, iexpacScores, isComplete, progress, veritasPrnScores } from '../src/domain/questionnaires/scoring';
+import { computeScores, eq5dScores, evasafScores, formatScore, iexpacScores, isComplete, progress, veritasPrnScores, veritasProScores } from '../src/domain/questionnaires/scoring';
 
 const all = (n: number, value: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`q${i + 1}`, value]));
 
@@ -56,7 +56,7 @@ describe('EQ-5D-3L', () => {
   });
 });
 
-describe('EVASAF y VERITAS-PRN: sin puntuación no documentada', () => {
+describe('EVASAF, VERITAS-PRN y VERITAS-Pro: sin puntuación no documentada', () => {
   it('EVASAF: completitud sin total', () => {
     expect(evasafScores(all(10, 4))).toMatchObject({ complete: true, summary_score: null });
   });
@@ -66,8 +66,13 @@ describe('EVASAF y VERITAS-PRN: sin puntuación no documentada', () => {
     expect(s.scores).toBeNull();
     expect(s.complete).toBe(false);
   });
-  it('VERITAS-Pro: sin derivados', () => {
-    expect(computeScores('VERITAS_PRO', {})).toEqual({});
+  it('VERITAS-Pro: recuentos por bloque, completitud y sin puntuación', () => {
+    const s = veritasProScores({ q1: 1, q4: 5, q8: 2, q13: 3, q17: 4, q24: 1 });
+    expect(s.block_items_answered).toEqual({ routine: 2, dosing: 1, planning: 0, remembering: 1, skipping: 1, communicating: 1 });
+    expect(s).toMatchObject({ items_expected: 24, items_answered: 6, complete: false, scores: null, scoring_status: 'scoring_key_not_provided' });
+    const full = computeScores('VERITAS_PRO', all(24, 3));
+    expect(isComplete('VERITAS_PRO', full)).toBe(true);
+    expect(isComplete('VERITAS_PRO', computeScores('VERITAS_PRO', { q1: 1 }))).toBe(false);
   });
 });
 
@@ -103,8 +108,10 @@ describe('validación del borrador', () => {
     expect(validateDraft('VERITAS_PRN', { ...base, status: 'not_applicable', reasonCode: 'other', reasonDetail: '' }, '2026-10-26')).toHaveLength(1);
     expect(validateDraft('VERITAS_PRN', { ...base, status: 'not_applicable', reasonCode: 'regimen_mismatch' }, '2026-10-26')).toHaveLength(0);
   });
-  it('VERITAS-Pro no admite respuestas', () => {
-    expect(validateDraft('VERITAS_PRO', { ...base, responses: { q1: 1 } }, '2026-10-26').length).toBeGreaterThan(0);
+  it('VERITAS-Pro admite respuestas 1-5 y rechaza valores o ítems fuera del documento', () => {
+    expect(validateDraft('VERITAS_PRO', { ...base, responses: { q1: 1, q24: 5 } }, '2026-10-26')).toHaveLength(0);
+    expect(validateDraft('VERITAS_PRO', { ...base, responses: { q1: 6 } }, '2026-10-26').join(' ')).toMatch(/q1/);
+    expect(validateDraft('VERITAS_PRO', { ...base, responses: { q25: 1 } }, '2026-10-26').length).toBeGreaterThan(0);
   });
   it('la carga útil solo incluye motivo en estados que lo requieren', () => {
     expect(buildAdministrationPayload({ ...base, reasonCode: 'other', reasonDetail: 'x' }).status_reason_code).toBeNull();

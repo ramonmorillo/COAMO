@@ -112,7 +112,7 @@ export function QuestionnaireExportPage() {
         <ul className="coamo-pending-list" style={{ marginTop: 'var(--sp-4)' }}>
           <li>Esquema de columnas {EXPORT_SCHEMA_VERSION}: nombres estables; cualquier cambio cambiará esta versión.</li>
           <li>Ausente = celda vacía. El motivo se lee en <code>*_status</code> y <code>*_reason</code>; nunca se codifica como 0 ni −999.</li>
-          <li>VERITAS-PRN se exporta como códigos de respuesta (1 = Siempre … 5 = Nunca), no como puntuaciones.</li>
+          <li>VERITAS-PRN y VERITAS-Pro se exportan como códigos de respuesta (1 = Siempre … 5 = Nunca), no como puntuaciones.</li>
           <li>Sin índice de utilidad EQ-5D ni total EVASAF: no hay regla aprobada.</li>
           <li>La descarga se genera en el navegador y no queda registrada en la auditoría (limitación conocida).</li>
         </ul>
