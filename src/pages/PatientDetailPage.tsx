@@ -61,7 +61,14 @@ export function PatientDetailPage() {
         eyebrow={center?.name ?? 'Paciente'}
         title={patient.study_code}
         description={`${DIAGNOSIS_LABEL[patient.diagnosis]} · ${patient.sex ? SEX_LABEL[patient.sex] : 'Sexo sin registrar'} · ${patient.age_at_inclusion ?? '—'} años`}
-        actions={<StatusBadge tone={STATUS_TONE[patient.status]} dot>{STATUS_LABEL[patient.status]}</StatusBadge>}
+        actions={
+          <>
+            <StatusBadge tone={STATUS_TONE[patient.status]} dot>{STATUS_LABEL[patient.status]}</StatusBadge>
+            {patient.status !== 'screening' && patient.status !== 'not_included' ? (
+              <Link className="button-link button-secondary" to={`/agenda?patient=${patient.id}&period=all`}>Agenda del paciente</Link>
+            ) : null}
+          </>
+        }
       />
 
       {patient.status_reason ? (
@@ -150,7 +157,7 @@ function InclusionCard({ patient, initial, onChanged }: { patient: Patient; init
           </label>
           <label>
             Versión del consentimiento
-            <input value={record.consent_version ?? ''} maxLength={40} disabled={!editable} placeholder="p. ej., v1.0"
+            <input value={record.consent_version ?? ''} maxLength={40} disabled={!editable} placeholder="p. ej., v2 (25/09/2026)"
               onChange={(e) => set('consent_version', e.target.value)} />
           </label>
           <label>
@@ -274,6 +281,16 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
     await onChanged();
   };
 
+  // Reprogramar o corregir la fecha (p. ej., la cita se realizó otro día). La BD vuelve a validar la
+  // cronología y que una visita realizada no tenga fecha futura.
+  const changeDate = async (visit: Visit, nextDate: string) => {
+    if (!nextDate || nextDate === visit.visit_date) return;
+    setError(null);
+    const result = await updateVisit(visit.id, { visit_date: nextDate });
+    if (result.error) setError(result.error);
+    await onChanged();
+  };
+
   return (
     <section className="card" aria-labelledby="visits-title">
       <h2 id="visits-title">Visitas y contactos</h2>
@@ -286,7 +303,14 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
             <tbody>
               {visits.map((v) => (
                 <tr key={v.id}>
-                  <td>{formatDate(v.visit_date)}</td>
+                  <td>
+                    {canAdd && v.status !== 'cancelled' ? (
+                      <span className="coamo-reschedule">
+                        <input type="date" defaultValue={v.visit_date} key={`${v.id}-${v.visit_date}`} aria-label={`Fecha de la ${VISIT_TYPE_LABEL[v.visit_type].toLowerCase()}`}
+                          onBlur={(e) => void changeDate(v, e.target.value)} />
+                      </span>
+                    ) : formatDate(v.visit_date)}
+                  </td>
                   <td className="strong">{VISIT_TYPE_LABEL[v.visit_type]}</td>
                   <td>{MODALITY_LABEL[v.modality]}</td>
                   <td>{v.is_scheduled ? 'Sí' : 'No'}</td>
@@ -355,7 +379,7 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
               </select>
             </label>
           </div>
-          {error ? <ErrorState title="No se pudo registrar" message={error} /> : null}
+          {error ? <ErrorState title="No se pudo guardar" message={error} /> : null}
           <div className="form-actions">
             <button type="submit" disabled={saving}>{saving ? 'Guardando...' : 'Registrar'}</button>
           </div>
