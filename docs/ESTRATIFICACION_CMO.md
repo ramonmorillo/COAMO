@@ -9,8 +9,9 @@ servicio `src/services/stratificationService.ts`, pruebas `tests/stratification.
 `e2e/questionnaires.smoke.cjs`. BD: migración `20261027120000_coag_stratifications.sql` y `db-tests/80_coag_stratifications.sql`
 en `ramonmorillo/dermapex` (ver §6).
 
-**Estado:** cálculo y registro implementados y probados (frontend, BD local PostgreSQL 16 y E2E). **La migración no está
-aplicada en Supabase**: hasta aplicarla, la página muestra error al guardar.
+**Estado:** cálculo y registro implementados y probados (frontend, BD local PostgreSQL 16 y E2E). **Migración aplicada en
+Supabase** (`coag_stratifications`, versión registrada 20261027095307; comprobado con la lista de migraciones del proyecto el
+28/10/2026).
 
 ## 1. Modelo tal como figura en M
 
@@ -117,7 +118,7 @@ Pruebas BD (`db-tests/80_*`, 40 aserciones, PostgreSQL 16 local con `scripts/tes
 máximos 3/25/15/16, cortes inclusivos, caso clínico 1 (31 → P1), corrección (24 → P2), elevación, reestratificación con motivo,
 terapia avanzada, datos ausentes, menores, calidad de vida, aislamiento por centro y frente a DERMAPEX, auditoría.
 
-### Despliegue (pendiente de autorización)
+### Despliegue (realizado; se conserva el procedimiento como referencia)
 
 1. Revisar y fusionar el PR de `ramonmorillo/dermapex` (CI ejecuta `scripts/test-db.sh`).
 2. Copia de seguridad / punto de restauración del proyecto Supabase compartido.
