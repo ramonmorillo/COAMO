@@ -4,6 +4,8 @@
 
 import { supabase } from '../lib/supabase';
 import type { ClinicalValues, Diagnosis } from '../domain/clinicalSchema';
+import type { AgendaVisit } from '../domain/agenda';
+import type { Priority } from '../domain/stratification';
 import type { InclusionRecord, Modality, PatientStatus, StatusReason, VisitStatus, VisitType } from '../domain/study';
 
 export type Patient = {
@@ -48,6 +50,32 @@ const PATIENT_COLUMNS = 'id,center_id,study_code,center_seq,age_at_inclusion,sex
 
 function notConfigured<T>(data: T): Result<T> {
   return { data, error: 'Supabase no está configurado.' };
+}
+
+// Índices únicos parciales de coag_visits (migración 20261007170100): una basal y una final no anuladas.
+const UNIQUE_VISIT_MESSAGES: Record<string, string> = {
+  uq_coag_visits_one_baseline: 'El paciente ya tiene una visita basal no anulada. Reprográmala desde la ficha o anúlala antes de crear otra.',
+  uq_coag_visits_one_final: 'El paciente ya tiene una visita final no anulada. Reprográmala desde la ficha o anúlala antes de crear otra.',
+};
+
+export function visitErrorMessage(message: string | null | undefined): string | null {
+  if (!message) return null;
+  const index = Object.keys(UNIQUE_VISIT_MESSAGES).find((name) => message.includes(name));
+  return index ? UNIQUE_VISIT_MESSAGES[index] : message;
+}
+
+const PAGE = 1000;
+
+/** Lee todas las filas en páginas con orden estable (el servidor limita cada respuesta a 1000). */
+async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Result<T[]>> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) return { data: rows, error: error.message };
+    const chunk = (data ?? []) as T[];
+    rows.push(...chunk);
+    if (chunk.length < PAGE) return { data: rows, error: null };
+  }
 }
 
 export async function listPatients(): Promise<Result<Patient[]>> {
@@ -118,13 +146,13 @@ export async function getVisit(visitId: string): Promise<Result<Visit | null>> {
 export async function createVisit(input: Omit<Visit, 'id'>): Promise<Result<null>> {
   if (!supabase) return notConfigured(null);
   const { error } = await supabase.from('coag_visits').insert(input);
-  return { data: null, error: error?.message ?? null };
+  return { data: null, error: visitErrorMessage(error?.message) };
 }
 
 export async function updateVisit(visitId: string, changes: Partial<Pick<Visit, 'visit_date' | 'status' | 'modality' | 'is_scheduled'>>): Promise<Result<null>> {
   if (!supabase) return notConfigured(null);
   const { error } = await supabase.from('coag_visits').update(changes).eq('id', visitId);
-  return { data: null, error: error?.message ?? null };
+  return { data: null, error: visitErrorMessage(error?.message) };
 }
 
 export async function getSchedule(patientId: string): Promise<Result<Schedule | null>> {
@@ -149,4 +177,44 @@ export async function saveClinicalAssessment(visitId: string, payload: ClinicalV
     ? await supabase.from('coag_clinical_assessments').update(payload).eq('visit_id', visitId)
     : await supabase.from('coag_clinical_assessments').insert({ visit_id: visitId, ...payload });
   return { data: null, error: error?.message ?? null };
+}
+
+type AgendaVisitRow = Omit<AgendaVisit, 'study_code'> & {
+  coag_patients: { study_code: string | null } | Array<{ study_code: string | null }> | null;
+};
+
+/**
+ * Todas las visitas visibles (la RLS limita a los centros del usuario; coordinación ve todos) con el
+ * código del paciente. El filtrado por mes, paciente y estado se hace en el cliente (domain/agenda).
+ */
+export async function listAgendaVisits(): Promise<Result<AgendaVisit[]>> {
+  if (!supabase) return notConfigured([]);
+  const client = supabase;
+  const result = await fetchAll<AgendaVisitRow>((from, to) =>
+    client.from('coag_visits').select('id,patient_id,visit_type,visit_date,status,modality,coag_patients!inner(study_code)').order('id').range(from, to));
+  const rows = result.data.map(({ coag_patients, ...visit }) => {
+    const patient = Array.isArray(coag_patients) ? coag_patients[0] : coag_patients;
+    return { ...visit, study_code: patient?.study_code ?? null };
+  });
+  return { data: rows, error: result.error };
+}
+
+/**
+ * Prioridad CMO vigente por paciente: la de la estratificación completada en la visita realizada más
+ * reciente (orientativa para la periodicidad del seguimiento).
+ */
+export async function listLatestPriorities(visits: Array<Pick<AgendaVisit, 'id' | 'patient_id' | 'visit_date'>>): Promise<Result<Record<string, Priority>>> {
+  if (!supabase) return notConfigured({});
+  const client = supabase;
+  const result = await fetchAll<{ visit_id: string; final_priority: Priority | null }>((from, to) =>
+    client.from('coag_stratifications').select('visit_id,final_priority').eq('status', 'completed').order('id').range(from, to));
+  const visitById = new Map(visits.map((v) => [v.id, v]));
+  const latest: Record<string, { date: string; priority: Priority }> = {};
+  for (const row of result.data) {
+    const visit = visitById.get(row.visit_id);
+    if (!visit || !row.final_priority) continue;
+    const current = latest[visit.patient_id];
+    if (!current || visit.visit_date >= current.date) latest[visit.patient_id] = { date: visit.visit_date, priority: row.final_priority };
+  }
+  return { data: Object.fromEntries(Object.entries(latest).map(([id, v]) => [id, v.priority])), error: result.error };
 }

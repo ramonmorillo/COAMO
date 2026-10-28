@@ -141,11 +141,17 @@ export function AppShell() {
             <NavLink to="/patients/new" className={navLinkClass}>
               Nuevo paciente
             </NavLink>
+            <NavLink to="/agenda" className={navLinkClass}>
+              Agenda
+            </NavLink>
             <NavLink to="/centers" className={navLinkClass}>
               Centros
             </NavLink>
-            <NavLink to="/questionnaires/export" className={navLinkClass}>
+            <NavLink to="/export" className={navLinkClass}>
               Exportación
+            </NavLink>
+            <NavLink to="/project" className={navLinkClass}>
+              Proyecto
             </NavLink>
           </nav>
           <div className="topbar-meta">

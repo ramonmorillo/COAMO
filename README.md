@@ -2,7 +2,17 @@
 
 Herramienta digital del estudio COAMO (atención farmacéutica según el modelo CMO en pacientes adultos con hemofilia A, hemofilia B o enfermedad de von Willebrand). Acceso restringido a profesionales autorizados.
 
-**Estado (2026-10-27):** acceso seguro y autorización COAMO, centros, pacientes seudonimizados, inclusión, visitas y datos clínicos, y **cuestionarios V0/VF** (IEXPAC, EQ-5D-3L autoadministrado/entrevista, EVASAF, VERITAS-PRN y VERITAS-Pro; este último requiere una migración de BD pendiente, ver `docs/CUESTIONARIOS.md` §9) con evolución V0–VF, exportación CSV e indicadores de cumplimiento. Documentación: [`docs/CUESTIONARIOS.md`](docs/CUESTIONARIOS.md) y [`docs/CUESTIONARIOS_TRAZABILIDAD.md`](docs/CUESTIONARIOS_TRAZABILIDAD.md). **Estratificación CMO** (modelo SEFH v2.0) por visita, con registro propio en `coag_stratifications` (migración pendiente de aplicar): [`docs/ESTRATIFICACION_CMO.md`](docs/ESTRATIFICACION_CMO.md). Pendiente: actuaciones de AF por prioridad.
+**Aprobación ética:** informe favorable del CEIm del Hospital Universitario y Politécnico La Fe, nº de registro **2026-0810-1** (sesión de 21/10/2026). Promotor e IP: Tomás Palanques Pastor (Servicio de Farmacia, H. U. i P. La Fe). Documentos aprobados: protocolo de 30/08/2026 y HIP/CI adultos versión 2 de 25/09/2026. Se muestra en «Proyecto» (`#/project`), en el pie de la app y en el manifiesto de cada exportación.
+
+**Estado (2026-10-28):** acceso seguro y autorización COAMO, centros, pacientes seudonimizados, inclusión, visitas y datos clínicos; **cuestionarios V0/VF** (IEXPAC, EQ-5D-3L, EVASAF, VERITAS-PRN; VERITAS-Pro pendiente de una migración de BD, ver `docs/CUESTIONARIOS.md` §9) — [`docs/CUESTIONARIOS.md`](docs/CUESTIONARIOS.md), [`docs/CUESTIONARIOS_TRAZABILIDAD.md`](docs/CUESTIONARIOS_TRAZABILIDAD.md); **estratificación CMO** (modelo SEFH v2.0) por visita — [`docs/ESTRATIFICACION_CMO.md`](docs/ESTRATIFICACION_CMO.md). Migraciones de cuestionarios y estratificación **aplicadas** en Supabase.
+
+Incorporado de DERMAPEX (28/10/2026):
+
+- **Agenda** (`#/agenda`): calendario mensual, panel del día y listado imprimible; filtros por paciente, periodo y estado (programada, programada vencida, realizada, no realizada, anulada) en la URL. Las citas son visitas `coag_visits` con estado «programada» (sin tabla nueva). Solo ofrece los tipos que la BD admite (una basal y una final no anuladas; seguimientos y contactos repetibles), sugiere la final dentro de su ventana (basal + 12 meses ±1) y orienta la próxima valoración según la prioridad CMO vigente (P1 mensual, P2 semestral, P3 sin seguimiento intermedio). Reprogramación desde la ficha del paciente. Lógica en `src/domain/agenda.ts`.
+- **Exportación de investigación** (`#/export`): ZIP completo, conciliado con la BD y verificado (raw, LONG, WIDE V0/VF, ítems, respuestas de la estratificación, incidencias, diccionario, `.sps`, Excel, JSON, manifiesto). [`docs/EXPORTACION_INVESTIGACION.md`](docs/EXPORTACION_INVESTIGACION.md).
+- **Copias de seguridad**: las del proyecto compartido (scripts en `ramonmorillo/dermapex`), verificadas para las tablas COAMO. [`docs/COPIAS_SEGURIDAD.md`](docs/COPIAS_SEGURIDAD.md).
+
+Pendiente: actuaciones de AF por prioridad.
 
 ## Arquitectura
 
@@ -32,8 +42,11 @@ cp .env.example .env   # URL y clave pública del proyecto Supabase compartido
 npm ci
 npm run dev
 npm test
-# Prueba E2E de la interfaz con API simulada (ver cabecera del script):
+# Pruebas E2E de la interfaz con API simulada (ver cabecera de cada script):
 # node e2e/questionnaires.smoke.cjs
+# node e2e/agenda-export.smoke.cjs
+# Exportación contra el esquema real (PostgreSQL local preparado con scripts/test-db.sh de ramonmorillo/dermapex):
+# EXPORT_DB_URL=postgresql://postgres:postgres@localhost:5432/<bd> npx vitest run tests/researchExport.db.test.ts
 ```
 
 ## Despliegue

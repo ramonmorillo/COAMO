@@ -2,7 +2,7 @@
 
 Estado: implementado en frontend (este repositorio) y en el historial canónico de migraciones (`ramonmorillo/dermapex`,
 `supabase/migrations/20261026120000_coag_questionnaires.sql` + `db-tests/70_coag_questionnaires.sql`).
-**La migración NO está aplicada en Supabase**: ver §8.
+**Migración aplicada en Supabase** (`coag_questionnaires`, versión registrada 20261026161652; comprobado el 28/10/2026): ver §8.
 **VERITAS-Pro (27/10/2026)**: implementado en el frontend; la BD necesita una migración adicional (§9) antes de poder guardar respuestas.
 
 ## 1. Fuentes y clasificación de los documentos
@@ -98,7 +98,7 @@ columnas propias; neutralización de fórmulas; sin texto libre ni UUID. Esquema
 | 10 GitHub Pages | build con `COAMO_BASE_PATH=/COAMO/` + E2E (HashRouter) a 1280 y 390 px | OK |
 
 Totales: Vitest 84/84; baterías SQL 10-70 superadas (70: 43 aserciones); E2E 29/29.
-**No verificado**: comportamiento contra el Supabase real (migración no aplicada); lectores de pantalla reales; impresión
+**No verificado**: comportamiento contra el Supabase real (migración ya aplicada, pero sin prueba funcional registrada en producción); lectores de pantalla reales; impresión
 en todos los navegadores; importación efectiva en SPSS/R (solo formato).
 
 ## 7. Limitaciones y decisiones pendientes (no suplidas con supuestos)
@@ -123,7 +123,7 @@ en todos los navegadores; importación efectiva en SPSS/R (solo formato).
 10. Obligatoriedad por protocolo no impuesta: la app no exige ningún instrumento; el profesional marca «no aplicable».
 11. Orden de administración en V0 (IEXPAC antes de aplicar CMO): solo indicado en pantalla.
 
-## 8. Despliegue de la migración (pendiente de autorización)
+## 8. Despliegue de la migración (realizado; se conserva el procedimiento como referencia)
 
 Proyecto Supabase compartido `dermapex` (ref. `efjpjponblmdjlhmmiet`); última migración COAMO aplicada: `coag_patients_visits`.
 
