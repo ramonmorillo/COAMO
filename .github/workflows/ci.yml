@@ -90,10 +90,12 @@ jobs:
       - name: Export against real schema and RLS
         env:
           EXPORT_DB_URL: ${{ env.DATABASE_URL }}
-        run: npx vitest run tests/researchExport.db.test.ts
+        # --dir tests: el filtro de vitest es por subcadena y, sin acotar, también ejecutaría las pruebas
+        # de canonical-db/ (DERMAPEX) contra esta base.
+        run: npx vitest run --dir tests tests/researchExport.db.test.ts
 
       - name: SPSS import validated with PSPP
         run: |
           mkdir -p "$RUNNER_TEMP/export-fixture"
-          EXPORT_FIXTURE_DIR="$RUNNER_TEMP/export-fixture" npx vitest run tests/researchExport.test.ts -t "PSPP"
+          EXPORT_FIXTURE_DIR="$RUNNER_TEMP/export-fixture" npx vitest run --dir tests tests/researchExport.test.ts -t "PSPP"
           python scripts/validate-export-spss.py "$RUNNER_TEMP/export-fixture/standard" "$RUNNER_TEMP/export-fixture/spanish"
