@@ -269,3 +269,30 @@ button.button-link-inline { display: inline; min-height: 0; padding: 0; border: 
   .agenda-page .page-header { display: none; }
   .agenda-print-header { justify-content: space-between; border-bottom: 1px solid #000000; padding-bottom: 4px; margin-bottom: 8px; }
 }
+
+/* Portada pública: la base usa acentos turquesa fijos; aquí se pasan a la gama granate de COAMO. */
+.hero-copy .iris-eyebrow, .cmo-grid .iris-eyebrow { color: #eaa9ba; }
+.hero-support { color: #dcbcc5; }
+.hero-actions .button-secondary { background: transparent; }
+.hero-actions .button-secondary:hover { background: rgba(255, 255, 255, .08); }
+.hero-reference, .longitudinal-meta { color: #c0939f; }
+.longitudinal-heading { color: #e6cbd2; }
+.timeline-area { fill: rgba(234, 169, 186, .1); }
+.timeline-line { stroke: #eaa9ba; }
+.timeline-point text { fill: #d6b1bb; }
+.cmo-section { color: #e6cbd2; }
+.cmo-grid p, .cmo-pillars span { color: #dcbcc5; }
+.cmo-grid p + p { margin-top: var(--sp-4); }
+.public-footer { color: #d6b1bb; }
+.public-footer-code { color: #b98b97; }
+.public-footer a { color: #e6cbd2; }
+
+.coamo-priority-list { margin: var(--sp-6) 0 0; display: grid; gap: 0; }
+.coamo-priority-list div { padding: var(--sp-3) 0; display: grid; grid-template-columns: 7.5rem 1fr auto; gap: var(--sp-3); align-items: baseline; border-top: 1px solid rgba(255, 255, 255, .17); font-size: var(--fs-sm); }
+.coamo-priority-list dt { color: #fff; font-weight: 650; }
+.coamo-priority-list dd { margin: 0; color: #dcbcc5; }
+.coamo-priority-list dd:last-child { color: #fff; text-align: right; }
+@media (max-width: 640px) {
+  .coamo-priority-list div { grid-template-columns: 1fr; gap: var(--sp-1); }
+  .coamo-priority-list dd:last-child { text-align: left; }
+}
