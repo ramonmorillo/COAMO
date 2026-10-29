@@ -6,9 +6,42 @@ import { PublicFooter } from '../components/public/PublicFooter';
 import { BrandMark } from '../components/ui/BrandMark';
 import { LoadingState } from '../components/ui/LoadingState';
 import { Notice } from '../components/ui/Notice';
-import { PROJECT_IDENTITY } from '../constants/institutional';
+import { PROJECT_IDENTITY, PROJECT_INSTITUTIONAL_REFERENCE, getEthicsApprovalDateLabel } from '../constants/institutional';
 import { consumePendingAuthLink, getAuthRedirectUrl } from '../lib/authLinks';
 import { getCurrentSession, requestPasswordReset, signInWithPassword, subscribeToAuthChanges } from '../services/authService';
+
+// Contenido de la portada: solo lo que consta en el protocolo, en el dictamen del CEIm y en la documentación del
+// modelo CMO (docs/ESTRATIFICACION_CMO.md, docs/CUESTIONARIOS.md). No añadir cifras ni afirmaciones sin fuente.
+
+const STUDY_PILLARS = [
+  ['01', 'Población', 'Pacientes adultos con hemofilia A, hemofilia B o enfermedad de von Willebrand, incluidos tras comprobar la elegibilidad y obtener el consentimiento informado.'],
+  ['02', 'Diseño', 'Estudio observacional multicéntrico con visita basal (V0) y visita final (VF) a los 12 meses ±1 mes, y seguimiento intermedio según la prioridad CMO.'],
+  ['03', 'Variable principal', 'Experiencia del paciente con la atención recibida, medida con el cuestionario IEXPAC al inicio y al final del seguimiento.'],
+] as const;
+
+const FEATURES = [
+  ['Inclusión seudonimizada', 'Alta sin datos identificativos, elegibilidad, consentimiento informado y estado del paciente en el estudio.'],
+  ['Visitas y agenda', 'Visitas basal, de seguimiento y final, contactos asistenciales y calendario con ventanas de visita y próxima valoración orientada por la prioridad CMO.'],
+  ['Datos clínicos y de tratamiento', 'Variables clínicas y farmacoterapéuticas definidas en el protocolo, registradas por visita.'],
+  ['Estratificación CMO', 'Cálculo de la prioridad con el modelo SEFH para coagulopatías congénitas, con intervalo cuando faltan datos y elevación de nivel motivada.'],
+  ['Cuestionarios V0/VF', 'IEXPAC, EQ-5D-3L, EVASAF y VERITAS (PRN y Pro), con evolución entre la visita basal y la final.'],
+  ['Exportación de investigación', 'Paquete conciliado con la base de datos: datos en formato largo y ancho, diccionario, sintaxis SPSS y manifiesto de verificación.'],
+] as const;
+
+const PROCESS = ['Incluir', 'Evaluar en V0', 'Estratificar', 'Seguir', 'Medir en VF'] as const;
+
+const INSTRUMENTS = [
+  ['IEXPAC', 'Experiencia del paciente con la atención (PREM). Variable principal.'],
+  ['EQ-5D-3L', 'Calidad de vida relacionada con la salud (PROM): perfil de salud y escala visual.'],
+  ['EVASAF', 'Satisfacción con la atención farmacéutica.'],
+  ['VERITAS-PRN / VERITAS-Pro', 'Adherencia al tratamiento a demanda o profiláctico.'],
+] as const;
+
+const PRIORITIES = [
+  ['Prioridad 1', '≥ 28 puntos o terapia génica/avanzada', 'Seguimiento mensual'],
+  ['Prioridad 2', '20 – 27 puntos', 'Seguimiento semestral'],
+  ['Prioridad 3', '< 20 puntos', 'Seguimiento anual'],
+] as const;
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -92,6 +125,9 @@ export function LoginPage() {
     setResetMessage('Si el email corresponde a una cuenta del estudio, recibirás un enlace para crear una nueva contraseña.');
   };
 
+  const ref = PROJECT_INSTITUTIONAL_REFERENCE;
+  const sessionDate = getEthicsApprovalDateLabel();
+
   return (
     <div className="public-page">
       <a className="skip-link" href="#contenido">Saltar al contenido</a>
@@ -102,6 +138,9 @@ export function LoginPage() {
             <span><strong>{PROJECT_IDENTITY.name}</strong><small>Modelo CMO</small></span>
           </a>
           <nav aria-label="Navegación pública">
+            <a href="#estudio">El estudio</a>
+            <a href="#modelo-cmo">Modelo CMO</a>
+            <a href="#investigacion">Investigación</a>
             <a className="public-access-link" href="#acceso">Acceso profesional</a>
           </nav>
         </div>
@@ -109,18 +148,107 @@ export function LoginPage() {
 
       <main id="contenido">
         <section className="public-hero" id="inicio" aria-labelledby="hero-title">
-          <div className="public-container">
+          <div className="public-container hero-grid">
             <div className="hero-copy">
-              <p className="iris-eyebrow">Estudio observacional multicéntrico</p>
-              <h1 id="hero-title">{PROJECT_IDENTITY.name}</h1>
-              <p className="hero-lead">{PROJECT_IDENTITY.subtitle}.</p>
-              <p className="hero-support">Acceso restringido a profesionales autorizados participantes en el estudio.</p>
+              <p className="iris-eyebrow">{PROJECT_IDENTITY.name} · Estudio observacional multicéntrico</p>
+              <h1 id="hero-title">Experiencia del paciente.<br />Estratificación. Seguimiento.</h1>
+              <p className="hero-lead">Herramienta digital del estudio {PROJECT_IDENTITY.name} para la atención farmacéutica según el modelo CMO en adultos con coagulopatías congénitas.</p>
+              <p className="hero-support">Reúne en un único entorno la inclusión seudonimizada, las visitas del estudio, los datos clínicos y de tratamiento, la estratificación CMO, los cuestionarios de resultados reportados por el paciente y la exportación para el análisis.</p>
               <div className="hero-actions">
                 <a className="button-link" href="#acceso">Acceso profesional</a>
+                <a className="button-secondary" href="#estudio">Conocer el estudio</a>
               </div>
+              {ref.ethicsApprovalCode ? (
+                <p className="hero-reference">{ref.ethicsDecision} del {ref.ethicsCommittee} · nº de registro {ref.ethicsApprovalCode}</p>
+              ) : null}
+            </div>
+            <div className="longitudinal-card" aria-label="Seguimiento desde la visita basal hasta la visita final a los doce meses">
+              <div className="longitudinal-heading"><span>Seguimiento del estudio</span><strong>12 meses ±1</strong></div>
+              <svg viewBox="0 0 520 210" role="img" aria-labelledby="timeline-title timeline-desc">
+                <title id="timeline-title">Línea temporal del estudio</title>
+                <desc id="timeline-desc">Visita basal V0, seguimientos intermedios según la prioridad CMO y visita final VF a los doce meses.</desc>
+                <path className="timeline-grid" d="M35 160H485 M35 60H485" />
+                {/* Línea temporal neutra: el estudio no ha medido aún ningún resultado, no se dibuja tendencia. */}
+                <path className="timeline-line" d="M45 110H475" />
+                {([[45, 110, 'V0 · Basal'], [190, 110, 'Seguimiento'], [330, 110, 'Seguimiento'], [475, 110, 'VF · 12 m']] as const).map(([x, y, label], index) => (
+                  <g key={index} className={`timeline-point timeline-point-${index + 1}`}>
+                    <circle cx={x} cy={y} r="7" /><text x={x} y="190" textAnchor="middle">{label}</text>
+                  </g>
+                ))}
+              </svg>
+              <div className="longitudinal-meta"><span>Intensidad según prioridad CMO</span><span>IEXPAC en V0 y VF</span></div>
             </div>
           </div>
         </section>
+
+        <section className="public-section" id="estudio" aria-labelledby="study-title">
+          <div className="public-container">
+            <div className="section-heading"><p className="iris-eyebrow">El estudio</p><h2 id="study-title">Atención farmacéutica CMO en coagulopatías congénitas</h2><p>{PROJECT_IDENTITY.name} evalúa la experiencia del paciente con coagulopatía congénita seguido con el Modelo de Atención Farmacéutica Capacidad-Motivación-Oportunidad.</p></div>
+            <div className="value-grid">
+              {STUDY_PILLARS.map(([number, title, copy]) => <article className="value-card" key={title}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
+            </div>
+          </div>
+        </section>
+
+        <section className="public-section public-section-muted" aria-labelledby="features-title">
+          <div className="public-container">
+            <div className="section-heading"><p className="iris-eyebrow">Funcionalidades</p><h2 id="features-title">Un entorno integrado para el estudio</h2><p>Cada módulo guía el registro con las reglas del protocolo, y la base de datos aplica esas mismas reglas al guardar.</p></div>
+            <div className="feature-grid">
+              {FEATURES.map(([title, copy], index) => <article className="feature-card" key={title}><span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><div><h3>{title}</h3><p>{copy}</p></div></article>)}
+            </div>
+          </div>
+        </section>
+
+        <section className="public-section" aria-labelledby="process-title">
+          <div className="public-container">
+            <div className="section-heading"><p className="iris-eyebrow">Cómo funciona</p><h2 id="process-title">De la inclusión a la medición de resultados</h2><p>El recorrido de cada paciente en el estudio, desde la visita basal hasta la visita final.</p></div>
+            <ol className="process-list">{PROCESS.map((step, index) => <li key={step}><span>{index + 1}</span><strong>{step}</strong></li>)}</ol>
+          </div>
+        </section>
+
+        <section className="public-section cmo-section" id="modelo-cmo" aria-labelledby="cmo-title">
+          <div className="public-container cmo-grid">
+            <div>
+              <p className="iris-eyebrow">Metodología CMO</p>
+              <h2 id="cmo-title">Seguimiento adaptado a las necesidades de cada paciente</h2>
+              <p>La estratificación aplica la adaptación del modelo CMO de la SEFH al paciente con coagulopatías congénitas (v2.0): 23 variables en cuatro dimensiones (demográfica, clínica, tratamiento y sociosanitaria) que asignan una prioridad y, con ella, la intensidad del seguimiento.</p>
+              <p>La herramienta propone el nivel; el farmacéutico lo confirma y puede situar al paciente en un nivel superior justificándolo.</p>
+            </div>
+            <div>
+              <div className="cmo-pillars" aria-label="Dimensiones de la metodología CMO"><span><strong>C</strong>Capacidad</span><span><strong>M</strong>Motivación</span><span><strong>O</strong>Oportunidad</span></div>
+              <dl className="coamo-priority-list" aria-label="Niveles de prioridad del modelo">
+                {PRIORITIES.map(([level, criterion, frequency]) => <div key={level}><dt>{level}</dt><dd>{criterion}</dd><dd>{frequency}</dd></div>)}
+              </dl>
+            </div>
+          </div>
+        </section>
+
+        <section className="public-section" aria-labelledby="instruments-title">
+          <div className="public-container product-grid">
+            <div className="section-heading">
+              <p className="iris-eyebrow">Resultados reportados por el paciente</p>
+              <h2 id="instruments-title">Cuestionarios en la visita basal y en la final</h2>
+              <p>Cada cuestionario se registra con su versión, modalidad de administración y origen (electrónico o papel). Las puntuaciones las calcula la base de datos solo cuando el instrumento documenta su método.</p>
+            </div>
+            <dl className="research-data">
+              {INSTRUMENTS.map(([name, copy]) => <div key={name}><dt>{name}</dt><dd>{copy}</dd></div>)}
+            </dl>
+          </div>
+        </section>
+
+        <section className="public-section public-section-muted" id="investigacion" aria-labelledby="research-title">
+          <div className="public-container research-grid">
+            <div><p className="iris-eyebrow">Proyecto de investigación</p><h2 id="research-title">Del modelo asistencial a la práctica real.</h2><p className="research-title">{ref.projectTitle}</p></div>
+            <dl className="research-data">
+              {ref.principalInvestigator ? <div><dt>Promotor e investigador principal</dt><dd>{ref.principalInvestigator}{ref.principalInvestigatorUnit ? <><br /><span className="cell-muted">{ref.principalInvestigatorUnit}</span></> : null}</dd></div> : null}
+              {ref.ethicsCommittee ? <div><dt>Comité de ética</dt><dd>{ref.ethicsCommittee}{ref.ethicsDecision && sessionDate ? <><br /><span className="cell-muted">{ref.ethicsDecision} · sesión de {sessionDate}</span></> : null}</dd></div> : null}
+              {ref.ethicsApprovalCode ? <div><dt>Nº de registro</dt><dd className="numeric">{ref.ethicsApprovalCode}</dd></div> : null}
+              <div><dt>Documentos aprobados</dt><dd>{[ref.protocolVersion, ref.informedConsentVersion].filter(Boolean).join(' · ')}</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <aside className="research-notice"><div className="public-container"><strong>Herramienta vinculada al estudio</strong><p>{PROJECT_IDENTITY.name} es la herramienta digital de recogida de datos del estudio. Los pacientes se registran seudonimizados y cada investigador accede solo a los de su centro asignado. El acceso está restringido a profesionales autorizados.</p></div></aside>
 
         <section className="access-section" id="acceso" aria-labelledby="auth-title">
           <div className="public-container access-grid">
