@@ -12,7 +12,7 @@ Estado: implementado en frontend (este repositorio) y en el historial canónico 
 | CUESTIONARIO_IEXPAC.docx | Escala (PREM), **variable principal** | `IEXPAC-COAMO-2026-10-14` | Protocolo COAMO p. 10 (transcrito en blueprint §10.1). El documento no la incluye |
 | EQ-5D-3L_autoadministrado.docx | Escala (PROM), modalidad autoadministrada | `EQ-5D-3L-ES-ES-v2.0-self` (pie: «Spain (Spanish) v2.0») | Perfil y EVA: definición del instrumento. **Sin índice** |
 | EQ-5D-3L_administrado_por_profesional.docx | **Mismo instrumento**, modalidad entrevista | `EQ-5D-3L-ES-ES-v1.0-interviewer` (pie: «Spain (Spanish) v1.0») | Igual |
-| PROYECTO_EVASAF.docx | Encuesta validada de satisfacción (Monje-Agudo 2015) | `EVASAF-FarmHosp2015-10it` | Solo escala de ítem 1-5; **sin total** |
+| PROYECTO_EVASAF.docx (14/10/2026) → PROYECTO_EVASAF.pdf (31/10/2026, vigente) | Encuesta validada de satisfacción (Monje-Agudo 2015) | `EVASAF-FarmHosp2015-10it` (mismos 10 ítems) | Solo escala de ítem 1-5; **sin total**. El documento vigente añade «Comentarios:» (texto libre, no puntúa) |
 | VERITAS-PRN.docx + VERITAS-PRN_puntuación.docx | Escala de adherencia (tratamiento a demanda) | `VERITAS-PRN-ES-COAMO-2026-10-14` (textos idénticos) | Documento de puntuación (IP, 03/11/2026); Duncan 2010, PMID 19754842 |
 | VERITAS-Pro.docx + VERITAS-Pro_puntuación.docx | Escala de adherencia (tratamiento profiláctico) | `VERITAS-Pro-ES-COAMO-2026-10-27` (textos idénticos) | Documento de puntuación (IP, 03/11/2026); Duncan 2010, PMID 19925631 |
 
@@ -109,15 +109,15 @@ en todos los navegadores; importación efectiva en SPSS/R (solo formato).
    03/11/2026. Sin pie de versión/copyright ni acreditación de versión española validada. **Incoherencia del documento**: el texto
    introductorio es idéntico al de VERITAS-PRN («piense en un episodio de sangrado habitual…»), aunque los ítems tratan de
    profilaxis; se reproduce literalmente hasta que el IP confirme el texto correcto. Pendiente la migración de BD (§9).
-2. **VERITAS-PRN y VERITAS-Pro no figuran en el protocolo aprobado por el CEIm (30/08/2026)**, que cita **Morisky-Green** para
-   adherencia (P p. 12). Los investigadores han decidido sustituirlo: **requiere valorar si es una modificación relevante y, en su
-   caso, comunicarla al CEIm**. Morisky-Green nunca tuvo formulario ni datos en COAMO (no hay registros históricos que conservar).
+2. **VERITAS-PRN y VERITAS-Pro sustituyen a Morisky-Green** (citado en el protocolo aprobado por el CEIm, P p. 12) por
+   **decisión de los investigadores (03/11/2026)**. Morisky-Green nunca tuvo formulario ni datos en COAMO (no hay registros históricos que conservar).
 3. **VERITAS-PRN**: sin acreditación de versión española validada ni de permiso de uso; aplicabilidad
    en EVW y terapias no sustitutivas (texto sobre infusiones de factor) pendiente del IP.
 4. **IEXPAC**: el documento no indica versión ni algoritmo; uso de ítems 12-15 pendiente del IP.
 5. **EQ-5D-3L**: licencia EuroQol y condiciones para cumplimentación electrónica pendientes de confirmar; índice de utilidad
    requiere tarifa aprobada. Versiones distintas por modalidad (v2.0/v1.0) — señaladas al comparar.
-6. **EVASAF**: sin regla de total; ítem 2 doble (dos afirmaciones); errata «na X» corregida.
+6. **EVASAF**: sin regla de total; ítem 2 doble (dos afirmaciones); errata «na X» corregida en el documento vigente (31/10/2026).
+   Comentarios en `comments` (migración `20261103140000_coag_evasaf_comments.sql`): vacío en registros anteriores = no recogido.
 7. **Repositorio público y bundle público**: los textos de los instrumentos (incluido EQ-5D © EuroQol) quedan accesibles
    en GitHub y en el JavaScript publicado, aunque los datos no. Si las licencias lo impiden, mover los textos a una tabla
    protegida por RLS antes de producción.
