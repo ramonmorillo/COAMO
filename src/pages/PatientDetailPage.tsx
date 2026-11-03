@@ -19,6 +19,7 @@ import {
   createVisit, getInclusion, getPatient, getSchedule, listVisits, saveInclusion, updatePatientStatus, updateVisit,
   type Patient, type Schedule, type Visit,
 } from '../services/patientService';
+import { listEvolutionsForVisits } from '../services/evolutionService';
 import { listStratificationsForVisits, type StratificationRecord } from '../services/stratificationService';
 
 // Cuestionarios: módulo cargado bajo demanda (textos de los instrumentos fuera del arranque).
@@ -253,6 +254,7 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
   const [saving, setSaving] = useState(false);
   const canAdd = patient.status === 'included';
   const [strata, setStrata] = useState<Record<string, StratificationRecord>>({});
+  const [evolutions, setEvolutions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!allowedTypes.includes(type)) setType(allowedTypes[0]);
@@ -260,6 +262,7 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
 
   useEffect(() => {
     void listStratificationsForVisits(visits.map((v) => v.id)).then((r) => setStrata(Object.fromEntries(r.data.map((x) => [x.visit_id, x]))));
+    void listEvolutionsForVisits(visits.map((v) => v.id)).then((r) => setEvolutions(Object.fromEntries(r.data.map((x) => [x.visit_id, true]))));
   }, [visits]);
 
   const add = async (event: FormEvent) => {
@@ -326,6 +329,8 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
                       <>
                         {v.visit_type === 'baseline' || v.visit_type === 'final' ? <><Link to={`/visits/${v.id}/clinical`}>Datos clínicos</Link>{' · '}</> : null}
                         <Link to={`/visits/${v.id}/stratification`}>Estratificación CMO</Link>
+                        {' · '}<Link to={`/visits/${v.id}/evolution`}>Evolución farmacéutica</Link>
+                        {evolutions[v.id] ? <span className="coamo-field-hint"> (registrada)</span> : null}
                         {strata[v.id] ? (
                           <span className="coamo-field-hint">
                             {' '}· {strata[v.id].status === 'completed' && strata[v.id].final_priority ? `Prioridad ${strata[v.id].final_priority}` : 'borrador'}

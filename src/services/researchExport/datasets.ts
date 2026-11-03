@@ -55,6 +55,8 @@ export const TABLE_REQUESTS = {
       'id,visit_id,model_version,status,answers,suggestions,clinical_source_visit_id,raised_priority,result,score,score_min,score_max,model_priority,final_priority,revision,last_corrected_at,completed_at,created_at,updated_at',
     orderBy: 'id',
   },
+  // Evolución farmacéutica: solo metadatos. El texto libre NO se lee para exportar (ver EXCLUDED_COLUMNS).
+  evolutions: { table: 'coag_visit_evolutions', columns: 'visit_id,revision,created_at,updated_at', orderBy: 'visit_id' },
   // Vista: fecha esperada y ventana de la visita final (basal + 12 meses ±1 mes, protocolo p. 14).
   schedule: {
     table: 'coag_patient_schedule',
@@ -77,6 +79,11 @@ export const EXCLUDED_COLUMNS: Array<{ table: string; columns: string; reason: s
     table: 'coag_stratifications',
     columns: 'raised_reason, restratification_reason, last_correction_reason, correction_reason',
     reason: 'Texto libre. La elevación de prioridad se exporta en raised_priority (y en la variable derivada prioridad_elevada).',
+  },
+  {
+    table: 'coag_visit_evolutions',
+    columns: 'evolution_text',
+    reason: 'Texto libre asistencial (puede contener datos identificativos): se exporta solo su existencia, revisión y fechas. Incluir el texto requiere decisión del IP y del delegado de protección de datos.',
   },
   { table: 'coag_audit_log, coag_profiles, coag_center_memberships', columns: '(tablas completas)', reason: 'Datos de los profesionales y de auditoría: no son variables del estudio.' },
 ];
@@ -411,6 +418,16 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
       ],
       rows: raw.schedule,
     },
+    {
+      id: 'evolucion_farmaceutica', folder: 'raw', title: 'Evolución farmacéutica por visita (metadatos; sin texto libre)', grain: 'Una evolución por visita', key: ['visit_id'],
+      columns: [
+        c('visit_id', 'Identificador de la visita (UUID)', 'string', 'coag_visit_evolutions.visit_id'),
+        c('revision', 'Número de revisión', 'integer', 'coag_visit_evolutions.revision', { definition: '>1 = modificada tras su alta (versiones en coag_audit_log).' }),
+        createdAt('coag_visit_evolutions'),
+        updatedAt('coag_visit_evolutions'),
+      ],
+      rows: raw.evolutions ?? [],
+    },
   ];
 
   // ── Cuestionarios por visita e instrumento ──
@@ -472,6 +489,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
   );
 
   // ── LONG: una fila por visita ──
+  const evolutionByVisit = new Map((raw.evolutions ?? []).map((r) => [r.visit_id as string, r]));
   const longColumns: ColumnSpec[] = [
     c('study_code', 'Código de estudio del paciente', 'string', 'coag_patients.study_code'),
     c('center_code', 'Código del centro', 'string', 'coag_centers.code'),
@@ -484,6 +502,8 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
     c('is_scheduled', 'Visita programada (frente a no programada)', 'boolean', 'coag_visits.is_scheduled', { values: YES_NO }),
     c('dias_desde_basal', 'Días desde la visita basal', 'integer', 'derivada', { unit: 'días', rule: 'visit_date − fecha de la basal no anulada; vacío si no hay basal.' }),
     c('datos_clinicos_registrados', 'Datos clínicos registrados en la visita', 'boolean', 'derivada', { values: YES_NO, rule: 'Existe registro en coag_clinical_assessments (solo basal y final).' }),
+    c('evolucion_farmaceutica_registrada', 'Evolución farmacéutica registrada en la visita', 'boolean', 'derivada', { values: YES_NO, rule: 'Existe registro en coag_visit_evolutions (el texto no se exporta).' }),
+    c('evolucion_farmaceutica_revisiones', 'Número de revisión de la evolución farmacéutica', 'integer', 'coag_visit_evolutions.revision', { definition: '1 = sin modificaciones posteriores; vacío = sin evolución.' }),
     ...strataColumns('', ''),
     ...instrumentColumns('', ''),
   ];
@@ -502,6 +522,8 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
       is_scheduled: v.is_scheduled,
       dias_desde_basal: daysBetween(schedule?.baseline_date as string | null, v.visit_date as string),
       datos_clinicos_registrados: clinicalByVisit.has(v.id as string),
+      evolucion_farmaceutica_registrada: evolutionByVisit.has(v.id as string),
+      evolucion_farmaceutica_revisiones: (evolutionByVisit.get(v.id as string)?.revision as number | undefined) ?? null,
       ...strataValues(v.id as string, ''),
       ...instrumentValues(v.id as string, ''),
     };
