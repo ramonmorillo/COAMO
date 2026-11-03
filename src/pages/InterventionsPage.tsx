@@ -102,14 +102,14 @@ export function InterventionsPage() {
         ) : (
           <Notice tone="info">Sin estratificación CMO completada hasta esta visita: no se muestran actuaciones recomendadas. Puede registrar actuaciones del catálogo o adicionales.</Notice>
         )}
-        {priority?.priority === 1 ? (
+        {priority?.priority === 1 && !catalog.some((a) => a.source_table === 'Tabla 7') ? (
           <Notice tone="warning">
             Catálogo de Prioridad 1 incompleto: la Tabla 7 del modelo no está cargada (copia no legible). Se muestran las actuaciones de las Tablas 5 y 6, que
             el modelo acumula; faltan las específicas de Prioridad 1.
           </Notice>
         ) : null}
         <p className="help-text">
-          Catálogo: Tablas 5 (Prioridad 3) y 6 (Prioridad 2) del modelo CMO de coagulopatías (SEFH v2.0), acumulativas. Que una actuación aparezca
+          Catálogo: Tablas 5 (Prioridad 3), 6 (Prioridad 2) y 7 (Prioridad 1) del modelo CMO de coagulopatías (SEFH v2.0), acumulativas. Que una actuación aparezca
           recomendada <strong>no</strong> significa que se haya realizado: solo cuenta lo que registre como «realizada», con su fecha.
         </p>
         {message ? <Notice tone={message.tone}>{message.text}</Notice> : null}

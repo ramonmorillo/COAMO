@@ -24,7 +24,7 @@ cuestionarios originales restantes, EVASAF actualizado, «DATOS CLÍNICOS», mem
 | 2.4 EVASAF total | Sin total (no hay regla) | Se mantiene descriptivo | — | YA EXISTÍA Y SE HA VALIDADO |
 | 2.5 / 7 Biblioteca y repositorio documental | «Proyecto» con datos del dictamen | Registro documental + cuestionarios + imprimibles (auth) | `ProjectPage.tsx`, `constants/documents.ts`, `QuestionnairePrintPage.tsx` | IMPLEMENTADO Y VERIFICADO (originales: pendiente de almacén autenticado) |
 | 3 Datos clínicos | CRD del protocolo pp. 10-12 (`clinicalSchema.ts`) | Ninguno | — | BLOQUEADO: falta «DATOS CLÍNICOS» |
-| 4.1 Actuaciones por prioridad | No implementadas | Catálogo de las Tablas 5 (P3) y 6 (P2) del modelo CMO SEFH v2.0, transcritas literalmente de las imágenes aportadas (03/11/2026; pendiente de cotejo), acumulativas (24 actuaciones); registro prevista/realizada/anulada por visita, adicionales con ámbito, seguimiento; prioridad vigente y «recomendada» fijadas por la BD; en la copia para HC, en la evolución V0-VF y en la exportación. **Tabla 7 (P1) no cargada: copia ilegible** | DERMAPEX `20261103150000_coag_interventions.sql`, `db-tests/85_*`; `InterventionsPage.tsx`, `interventions.ts`, `interventionService.ts` | IMPLEMENTADO, PENDIENTE DE DESPLIEGUE (P1: PENDIENTE DE VALIDACIÓN DOCUMENTAL) |
+| 4.1 Actuaciones por prioridad | No implementadas | Catálogo de las Tablas 5 (P3), 6 (P2) y 7 (P1) del modelo CMO SEFH v2.0, transcritas literalmente de las imágenes aportadas (03/11/2026; pendiente de cotejo), acumulativas (31 actuaciones; P3 18, P2 24, P1 31); registro prevista/realizada/anulada por visita, adicionales con ámbito, seguimiento; prioridad vigente y «recomendada» fijadas por la BD; en la copia para HC, en la evolución V0-VF y en la exportación | DERMAPEX `20261103150000_coag_interventions.sql` (aplicada) y `20261103160000_coag_interventions_table7.sql`, `db-tests/85_*`; `InterventionsPage.tsx`, `interventions.ts`, `interventionService.ts` | IMPLEMENTADO Y VERIFICADO (Tablas 5-6 aplicadas en producción; Tabla 7 pendiente de aplicar) |
 | 4.2 Evolución farmacéutica | No existía | Tabla 1:1 con la visita, concurrencia, versiones en auditoría, copia para HC | DERMAPEX `20261103130000_coag_visit_evolutions.sql`, `PharmaceuticalEvolutionPage.tsx`, `evolution.ts` | IMPLEMENTADO Y VERIFICADO (aplicado en producción) |
 | 5 Longitudinal V0-VF | Comparación por cuestionario | Tabla integrada CMO + cuestionarios + clínica; exportación con cambios VERITAS | `longitudinal.ts`, `QuestionnaireEvolutionPage.tsx`, `datasets.ts` | IMPLEMENTADO Y VERIFICADO (VERITAS: tras despliegue) |
 | 6 Permisos multicéntricos | Ya en RLS: investigador = centros asignados; coordinador = lectura, escritura y borrado global | Auditoría; sin cambios | — | YA EXISTÍA Y SE HA VALIDADO (decisión pendiente, §4) |
@@ -81,8 +81,8 @@ No verificado: lectores de pantalla; impresión en todos los navegadores. (El fu
 
 - VERITAS: **permiso de uso para el estudio confirmado** por los investigadores. Sigue sin acreditarse la validación de la
   versión española y el texto introductorio de VERITAS-Pro (idéntico al de PRN) no se ha confirmado.
-- Tablas de actuaciones: aportadas como imágenes. Tablas 5 y 6 legibles y cargadas; Tabla 7 ilegible (pendiente de copia en
-  mejor resolución o del texto). Mientras tanto, Prioridad 1 muestra las actuaciones acumuladas de las Tablas 5-6 con aviso.
+- Tablas de actuaciones: aportadas como imágenes (Tabla 7 en una segunda copia legible). La Tabla 7 repite con el mismo texto
+  las de las Tablas 5-6 y añade 7 propias de Prioridad 1. Si el catálogo cargado no contiene la Tabla 7, la pantalla avisa.
 - Despliegue de los comentarios EVASAF: el frontend se publicó (09:20 UTC) dos minutos antes de aplicar la migración
   (09:22 UTC); en ese intervalo los cuestionarios no cargaban. Sin pérdida de datos. Para próximos cambios: aplicar la
   migración antes de fusionar el PR del frontend.

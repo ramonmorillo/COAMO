@@ -1,6 +1,7 @@
-// Actuaciones de atención farmacéutica por prioridad CMO (catálogo de las Tablas 5-6 del modelo SEFH v2.0, en la BD).
+// Actuaciones de atención farmacéutica por prioridad CMO (catálogo de las Tablas 5-7 del modelo SEFH v2.0, en la BD).
 // Reglas: recomendada ≠ realizada (solo hay registro si el profesional lo crea); la prioridad vigente es la de la última
-// estratificación completada hasta la fecha de la visita (la BD la fija igual al guardar); Tabla 7 (P1) pendiente.
+// estratificación completada hasta la fecha de la visita (la BD la fija igual al guardar). Si el catálogo cargado no
+// contiene la Tabla 7, la interfaz avisa de que el de Prioridad 1 está incompleto.
 
 import type { Priority } from './stratification';
 
@@ -19,8 +20,6 @@ export const INTERVENTION_STATUS_LABEL: Record<InterventionStatus, string> = {
   discarded: 'Anulada (registro erróneo)',
 };
 
-/** Prioridad 1: la Tabla 7 aún no está cargada (copia aportada ilegible). */
-export const PRIORITY_1_CATALOG_INCOMPLETE = true;
 export const CUSTOM_TEXT_MIN = 3;
 export const CUSTOM_TEXT_MAX = 500;
 export const FOLLOWUP_MAX = 1000;

@@ -98,6 +98,7 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   ok(await page.getByText(/Prioridad vigente: Prioridad 2/).isVisible(), 'actuaciones: prioridad vigente de la estratificación completada');
   ok(await page.locator('li[data-code]').count() === 3 && await page.getByText('Sin registrar').count() === 3, 'recomendadas para P2 (Tablas 5 y 6) y ninguna dada por realizada');
   ok(db.coag_interventions.length === 0, 'recomendada ≠ realizada: mostrarlas no crea registros');
+  ok(!(await page.getByText(/Catálogo de Prioridad 1 incompleto/).isVisible()), 'sin aviso de catálogo P1 incompleto en un paciente P2');
   await page.locator('li[data-code="SFT-01"]').getByRole('button', { name: 'Registrar como realizada' }).click();
   await page.getByText('Actuación registrada como realizada.').waitFor();
   ok(db.coag_interventions.length === 1 && db.coag_interventions[0].status === 'performed' && db.coag_interventions[0].performed_date === '2026-01-15', 'registro real: realizada con la fecha de la visita');
