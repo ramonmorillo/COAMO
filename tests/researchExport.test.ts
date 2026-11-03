@@ -176,6 +176,10 @@ describe('Paquete de exportación COAMO (datos sintéticos)', () => {
     const complete = data.stratifications.find((s) => s.status === 'completed' && s.score !== null && (s.answers as Record<string, string>).advanced_therapy !== 'yes')!;
     const points = rows.filter((r) => r.stratification_id === complete.id && r.puntos !== '').reduce((sum, r) => sum + Number(r.puntos), 0);
     expect(points).toBe(complete.score);
+    // Regresión: la edad (pregunta con excepción pediátrica) puntúa cuando no la activa (> 50 = 2).
+    const gt50 = rows.find((r) => r.pregunta === 'age' && r.respuesta === 'gt50');
+    if (gt50) expect(gt50.puntos).toBe('2');
+    for (const r of rows.filter((x) => (x.pregunta === 'age' && x.respuesta === 'lt18') || (x.pregunta === 'advanced_therapy' && x.respuesta === 'yes'))) expect(r.puntos).toBe('');
   });
 
   it('señala incidencias (cita vencida, final fuera de ventana) sin bloquear la exportación', async () => {
@@ -214,21 +218,37 @@ describe('Paquete de exportación COAMO (datos sintéticos)', () => {
     const { text } = await exportAll(data);
     for (const path of ['raw/cuestionarios_registros.csv', 'raw/estratificaciones.csv', 'raw/inclusion.csv', 'raw/datos_clinicos.csv', 'raw/evolucion_farmaceutica.csv', 'analisis/long_visitas.csv']) {
       const header = parseCsv(text(path), ',')[0];
-      for (const banned of ['status_reason_detail', 'last_correction_reason', 'raised_reason', 'restratification_reason', 'created_by', 'updated_by', 'assessed_by', 'evolution_text']) {
+      for (const banned of ['status_reason_detail', 'last_correction_reason', 'raised_reason', 'restratification_reason', 'created_by', 'updated_by', 'assessed_by']) {
         expect(header, `${path}.${banned}`).not.toContain(banned);
       }
     }
   });
 
-  it('evolución farmacéutica: existencia y revisión por visita, sin texto', async () => {
+  it('evolución farmacéutica: texto, revisión y fechas por visita (texto libre íntegro, con saltos de línea y comillas)', async () => {
     const { text } = await exportAll(data);
     const raw = parseCsv(text('raw/evolucion_farmaceutica.csv'), ',');
-    expect(raw[0]).toEqual(['visit_id', 'revision', 'created_at', 'updated_at']);
+    expect(raw[0]).toEqual(['visit_id', 'evolution_text', 'revision', 'created_at', 'updated_at']);
     expect(raw.length - 1).toBe(data.evolutions.length);
+    const byId = new Map(data.evolutions.map((e) => [e.visit_id as string, e.evolution_text as string]));
+    for (const row of raw.slice(1)) expect(row[1]).toBe(byId.get(row[0]));
+    expect(text('LEEME.txt')).toMatch(/TEXTO LIBRE/);
     const long = parseCsv(text('analisis/long_visitas.csv'), ',');
     const col = long[0].indexOf('evolucion_farmaceutica_registrada');
     expect(col).toBeGreaterThan(-1);
     expect(long.slice(1).filter((r) => r[col] === '1' || r[col] === 'true').length).toBe(data.evolutions.length);
+  });
+
+  it('EVASAF: comentarios íntegros en raw y en WIDE (V0/VF); vacío si no hay', async () => {
+    const { text } = await exportAll(data);
+    const raw = parseCsv(text('raw/cuestionarios_registros.csv'), ',');
+    const ci = raw[0].indexOf('comments');
+    const withComments = data.questionnaires.filter((q) => typeof q.comments === 'string');
+    expect(withComments.length).toBeGreaterThan(0);
+    const byId = new Map(raw.slice(1).map((r) => [r[0], r[ci]]));
+    for (const q of withComments) expect(byId.get(q.id as string)).toBe(q.comments);
+    expect(raw.slice(1).filter((r) => r[ci] !== '').length).toBe(withComments.length);
+    const wide = parseCsv(text('analisis/wide_pacientes.csv'), ',');
+    expect(wide[0]).toEqual(expect.arrayContaining(['evasaf_comentarios_v0', 'evasaf_comentarios_vf']));
   });
 
   it('Excel y JSON contienen todas las filas y los valores originales', async () => {

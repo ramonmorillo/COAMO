@@ -158,7 +158,7 @@ describe('progreso y formato', () => {
 });
 
 describe('validación del borrador', () => {
-  const base: DraftState = { status: 'in_progress', reasonCode: null, reasonDetail: '', mode: 'self', dataSource: 'paper', date: '2026-10-01', responses: {}, applicability: {} };
+  const base: DraftState = { status: 'in_progress', reasonCode: null, reasonDetail: '', mode: 'self', dataSource: 'paper', date: '2026-10-01', responses: {}, applicability: {}, comments: '' };
   it('completar exige fecha, modalidad y alguna respuesta', () => {
     expect(validateDraft('IEXPAC', { ...base, status: 'completed', date: '', mode: null }, '2026-10-26')).toHaveLength(3);
   });
@@ -181,6 +181,15 @@ describe('validación del borrador', () => {
     expect(validateDraft('VERITAS_PRO', { ...base, responses: { q1: 1, q24: 5 } }, '2026-10-26')).toHaveLength(0);
     expect(validateDraft('VERITAS_PRO', { ...base, responses: { q1: 6 } }, '2026-10-26').join(' ')).toMatch(/q1/);
     expect(validateDraft('VERITAS_PRO', { ...base, responses: { q25: 1 } }, '2026-10-26').length).toBeGreaterThan(0);
+  });
+  it('EVASAF: comentarios opcionales (≤ 2000), solo en EVASAF y nunca en «no aplicable/no realizado»', () => {
+    expect(validateDraft('EVASAF', { ...base, comments: 'Muy bien atendido' }, '2026-10-26')).toHaveLength(0);
+    expect(validateDraft('EVASAF', { ...base, comments: 'x'.repeat(2001) }, '2026-10-26').join(' ')).toMatch(/2000/);
+    expect(validateDraft('IEXPAC', { ...base, comments: 'texto' }, '2026-10-26').join(' ')).toMatch(/Solo EVASAF/);
+    expect(validateDraft('EVASAF', { ...base, status: 'not_done', reasonCode: 'patient_declined', comments: 'x' }, '2026-10-26').join(' ')).toMatch(/comentarios/);
+    expect(buildAdministrationPayload({ ...base, comments: '  Gracias  ' }).comments).toBe('Gracias');
+    expect(buildAdministrationPayload({ ...base, comments: '   ' }).comments).toBeNull();
+    expect(buildAdministrationPayload({ ...base, status: 'not_done', reasonCode: 'patient_declined', comments: 'x' }).comments).toBeNull();
   });
   it('la carga útil solo incluye motivo en estados que lo requieren', () => {
     expect(buildAdministrationPayload({ ...base, reasonCode: 'other', reasonDetail: 'x' }).status_reason_code).toBeNull();

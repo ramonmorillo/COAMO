@@ -44,6 +44,12 @@ export function QuestionnairePrintPage() {
           })}
         </section>
       ))}
+      {def.commentsField ? (
+        <section style={{ breakInside: 'avoid' }}>
+          <p><strong>{def.commentsField.label}</strong></p>
+          {[1, 2, 3, 4].map((n) => <p key={n} style={{ borderBottom: '1px solid currentColor', height: '1.6em', margin: 0 }} aria-hidden="true" />)}
+        </section>
+      ) : null}
       <footer className="coamo-field-hint" style={{ marginTop: '1.5rem' }}>
         <p>Versión COAMO: {instrumentVersion(code, 'self') ?? '—'} · {def.source}</p>
         {def.reference ? <p>{def.reference}</p> : null}

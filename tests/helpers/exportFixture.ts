@@ -95,6 +95,7 @@ export function syntheticData(options: { patients: number; seed?: number; follow
         id: uuid(4, ++qSeq), visit_id: visitId, instrument_code: code, instrument_version: instrumentVersion(code, mode), status: 'completed', status_reason_code: null,
         administration_mode: mode, data_source: pick(['electronic', 'paper']), administration_date: date, responses,
         item_applicability: code === 'IEXPAC' ? applicability : {}, scores: computeScores(code, responses, applicability), scoring_version: 'coamo-q-1',
+        comments: code === 'EVASAF' && r() < 0.5 ? `Comentario sintético ${qSeq}; con "comillas", punto y coma;\nsegunda línea` : null,
         revision: r() < 0.1 ? 2 : 1, last_corrected_at: null, completed_at: stamp, created_at: stamp, updated_at: stamp,
       });
     }
@@ -207,7 +208,7 @@ export function syntheticData(options: { patients: number; seed?: number; follow
 
   // Evoluciones farmacéuticas (solo metadatos) en las visitas realizadas impares.
   const evolutions = visits.filter((v, i) => v.status === 'completed' && i % 2 === 1)
-    .map((v) => ({ visit_id: v.id, revision: 1, created_at: '2026-10-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' }));
+    .map((v) => ({ visit_id: v.id, evolution_text: `Evolución sintética de ${v.id}.\nSegunda línea; con "comillas".`, revision: 1, created_at: '2026-10-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' }));
   return { centers, patients, inclusions, visits, clinical, questionnaires, stratifications, schedule, evolutions };
 }
 

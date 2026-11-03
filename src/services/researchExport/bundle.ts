@@ -254,6 +254,8 @@ AVISO
   Puntuaciones de cuestionarios: ${m.questionnaire_scoring_version}.
   Estratificación CMO: ${m.stratification_scoring_version}.
   Las fechas exactas y el centro pueden actuar como cuasiidentificadores.
+  Contiene TEXTO LIBRE (raw/evolucion_farmaceutica.evolution_text y comentarios EVASAF): revíselo y elimine cualquier dato
+  identificativo antes de compartir el paquete fuera del equipo investigador.
   Datos seudonimizados de un estudio clínico: custodia según el protocolo y la normativa de protección de datos.
 `;
 

@@ -122,6 +122,20 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   for (let i = 1; i <= 24; i++) await page.locator(`input[type=radio][name="item-q${i}"]`).first().check();
   ok(await page.getByText(/VERITAS-Pro total \(24-120; menor = mayor adherencia\): 68/).isVisible(), 'VERITAS-Pro: vista previa del total con la clave (todo «Siempre» = 68)');
 
+  // ── EVASAF: comentarios ──
+  await page.goto(`${base}/visits/v0/questionnaires/EVASAF`);
+  await page.getByRole('heading', { name: 'EVASAF' }).waitFor();
+  ok(await page.getByLabel('Comentarios:').isVisible(), 'EVASAF: apartado «Comentarios:» del documento actualizado');
+  await page.locator('input[type=radio][name="item-q1"]').first().check();
+  await page.getByLabel('Comentarios:').fill('  Muy bien atendido.\nGracias.  ');
+  await page.getByRole('button', { name: /Guardar borrador/ }).click();
+  await page.waitForTimeout(800);
+  const evasaf = db.coag_questionnaire_administrations.find((r) => r.instrument_code === 'EVASAF');
+  ok(evasaf && evasaf.comments === 'Muy bien atendido.\nGracias.', 'EVASAF: el comentario se envía recortado y se guarda');
+  await page.reload();
+  await page.getByLabel('Comentarios:').waitFor();
+  ok((await page.getByLabel('Comentarios:').inputValue()) === 'Muy bien atendido.\nGracias.', 'EVASAF: el comentario se recupera tras recargar');
+
   // ── Biblioteca ──
   await page.goto(`${base}/project`);
   await page.getByRole('heading', { name: 'Documentación y cuestionarios' }).waitFor();

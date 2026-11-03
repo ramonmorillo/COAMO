@@ -51,7 +51,7 @@ La literalidad de cada texto frente al .docx se comprueba en `tests/questionnair
 ## EVASAF
 
 - Documento: PROYECTO_EVASAF.docx
-- Fuente: Documento «PROYECTO EVASAF» (IP, 14/10/2026); escala 1-5 también en protocolo p. 12.
+- Fuente: Documento «PROYECTO EVASAF» (IP, 14/10/2026; actualizado 31/10/2026 con apartado «Comentarios»); escala 1-5 también en protocolo p. 12.
 - Puntuación: Cada ítem 1 (muy deficiente) – 5 (excelente). Sin puntuación total: ni el documento ni el protocolo definen una regla de agregación.
 - Dirección: En cada ítem, mayor valor = valoración más favorable.
 

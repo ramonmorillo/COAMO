@@ -11,7 +11,7 @@ type Result<T> = { data: T; error: string | null };
 
 const ADMIN_COLUMNS =
   'id,visit_id,instrument_code,instrument_version,status,status_reason_code,status_reason_detail,administration_mode,data_source,' +
-  'administration_date,responses,item_applicability,scores,scoring_version,revision,last_correction_reason,last_corrected_at,' +
+  'administration_date,responses,item_applicability,comments,scores,scoring_version,revision,last_correction_reason,last_corrected_at,' +
   'completed_at,created_at,updated_at';
 
 const PAGE = 1000;

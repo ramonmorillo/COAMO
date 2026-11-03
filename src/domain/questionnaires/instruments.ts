@@ -64,6 +64,8 @@ export type InstrumentDefinition = {
   reference?: string;
   /** Documento(s) de origen de la puntuación. */
   scoringSource?: string;
+  /** Apartado de texto libre del documento (no es un ítem ni puntúa). */
+  commentsField?: { label: string; hint: string };
 };
 
 // ── IEXPAC ──────────────────────────────────────────────────────────────────
@@ -369,7 +371,7 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     shortName: 'EVASAF',
     name: 'Encuesta de valoración de la satisfacción de los pacientes con la Atención Farmacéutica recibida en las consultas de Farmacia hospitalaria',
     construct: 'Satisfacción con la atención farmacéutica (encuesta validada; Monje-Agudo et al., Farm Hosp 2015;39(3):152-6).',
-    source: 'Documento «PROYECTO EVASAF» (IP, 14/10/2026); escala 1-5 también en protocolo p. 12.',
+    source: 'Documento «PROYECTO EVASAF» (IP, 14/10/2026; actualizado 31/10/2026 con apartado «Comentarios»); escala 1-5 también en protocolo p. 12.',
     available: true,
     modes: ['self', 'assisted', 'interviewer'],
     instructions: {
@@ -386,8 +388,10 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     limitations: [
       'Sin puntuación resumen aprobada: se analizan los ítems.',
       'El ítem 2 contiene dos afirmaciones en el documento; se reproduce tal cual.',
-      'Errata del documento («Marque con na X») corregida a «una X».',
+      'Errata «Marque con na X» del documento de 14/10/2026, corregida en el documento actualizado (31/10/2026) a «una X».',
+      'Comentarios: texto libre opcional, no puntúa; registros anteriores al 03/11/2026 sin el apartado (vacío = no recogido).',
     ],
+    commentsField: { label: 'Comentarios:', hint: 'Texto libre del paciente, opcional; no puntúa. No anotar datos identificativos.' },
     reference: 'Monje-Agudo P, Borrego-Izquierdo Y, Robustillo-Cortés MdeL, Jiménez-Galán R, Almeida-González CV, Morillo-Verdugo RA. Diseño y validación de una encuesta de satisfacción con la atención farmacéutica recibida en las consultas de farmacia hospitalaria. Farm Hosp. 2015;39(3):152-6. doi: 10.7399/fh.2015.39.3.8366. PMID: 26005890.',
   },
   VERITAS_PRN: {
@@ -411,7 +415,7 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     reference: 'Duncan NA, Kronenberger WG, Roberson CP, Shapiro AD. VERITAS-PRN: a new measure of adherence to episodic treatment regimens in haemophilia. Haemophilia. 2010 Jan;16(1):47-53. doi: 10.1111/j.1365-2516.2009.02094.x. PMID: 19754842.',
     scoringSource: 'Documento «VERITAS-PRN puntuación» (IP, 03/11/2026).',
     limitations: [
-      'Sustituye a Morisky-Green, que es el instrumento de adherencia citado en el protocolo aprobado por el CEIm (30/08/2026, p. 12): confirmar enmienda o comunicación al CEIm.',
+      'Sustituye a Morisky-Green (citado en el protocolo aprobado, p. 12) por decisión de los investigadores (03/11/2026).',
       'El documento no acredita que sea una versión española validada (adaptación transcultural) ni el permiso de uso de los autores.',
       'Aplicable en principio a régimen a demanda; texto centrado en hemofilia e infusiones de factor: aplicabilidad en EVW y terapias no sustitutivas, pendiente del IP.',
     ],
@@ -437,7 +441,7 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     reference: 'Duncan N, Kronenberger W, Roberson C, Shapiro A. VERITAS-Pro: a new measure of adherence to prophylactic regimens in haemophilia. Haemophilia. 2010 Mar;16(2):247-55. doi: 10.1111/j.1365-2516.2009.02129.x. PMID: 19925631.',
     scoringSource: 'Documento «VERITAS-Pro puntuación» (IP, 03/11/2026).',
     limitations: [
-      'Sustituye a Morisky-Green, que es el instrumento de adherencia citado en el protocolo aprobado por el CEIm (30/08/2026, p. 12): confirmar enmienda o comunicación al CEIm.',
+      'Sustituye a Morisky-Green (citado en el protocolo aprobado, p. 12) por decisión de los investigadores (03/11/2026).',
       'El documento no acredita que sea una versión española validada (adaptación transcultural) ni el permiso de uso de los autores; no incluye pie de versión ni copyright.',
       'El texto introductorio del documento es idéntico al de VERITAS-PRN (pide pensar en un episodio de sangrado habitual), aunque los ítems se refieren a la profilaxis: se reproduce tal cual; confirmar con el IP.',
       'Aplicable en principio a régimen de profilaxis; texto centrado en hemofilia e infusiones de factor: aplicabilidad en EVW y terapias no sustitutivas (p. ej., subcutáneas), pendiente del IP.',

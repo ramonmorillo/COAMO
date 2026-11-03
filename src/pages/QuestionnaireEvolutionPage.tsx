@@ -145,7 +145,7 @@ export function QuestionnaireEvolutionPage() {
         </div>
         <p className="coamo-field-hint">
           Evoluciones farmacéuticas registradas (todas las visitas): {evolutionCount ?? '—'}. Actuaciones farmacéuticas: pendientes del catálogo aprobado
-          (tablas 5-7 del modelo CMO), sin registro estructurado todavía. Variables clínicas no registradas en ninguna de las dos visitas no se muestran.
+          (tablas 5-7 del documento del modelo CMO SEFH v2.0), sin registro estructurado todavía. Variables clínicas no registradas en ninguna de las dos visitas no se muestran.
         </p>
       </section>
 
@@ -217,6 +217,9 @@ function AdminFacts({ admin, moment, code, visitId }: { admin: QuestionnaireAdmi
       <span className="coamo-q-cell-detail">Modalidad: {admin?.administration_mode ? ADMINISTRATION_MODE_LABEL[admin.administration_mode] : '—'}</span>
       <span className="coamo-q-cell-detail">Origen: {admin?.data_source ? DATA_SOURCE_LABEL[admin.data_source] : '—'}</span>
       <span className="coamo-q-cell-detail">Versión: {admin?.instrument_version ?? '—'}{admin && admin.last_corrected_at ? ' · corregido' : ''}</span>
+      {code === 'EVASAF' && admin && admin.status !== 'not_applicable' && admin.status !== 'not_done' ? (
+        <span className="coamo-q-cell-detail" style={{ whiteSpace: 'pre-wrap' }}>Comentarios: {admin.comments ?? '— (sin comentarios o no recogido)'}</span>
+      ) : null}
       {visitId ? <Link className="coamo-no-print" to={`/visits/${visitId}/questionnaires/${code}`}>Abrir</Link> : null}
     </div>
   );
