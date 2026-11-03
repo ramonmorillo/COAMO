@@ -416,7 +416,7 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     scoringSource: 'Documento «VERITAS-PRN puntuación» (IP, 03/11/2026).',
     limitations: [
       'Sustituye a Morisky-Green (citado en el protocolo aprobado, p. 12) por decisión de los investigadores (03/11/2026).',
-      'El documento no acredita que sea una versión española validada (adaptación transcultural) ni el permiso de uso de los autores.',
+      'Permiso de uso para el estudio confirmado por los investigadores (03/11/2026). El documento no acredita que sea una versión española validada (adaptación transcultural).',
       'Aplicable en principio a régimen a demanda; texto centrado en hemofilia e infusiones de factor: aplicabilidad en EVW y terapias no sustitutivas, pendiente del IP.',
     ],
   },
@@ -442,7 +442,7 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     scoringSource: 'Documento «VERITAS-Pro puntuación» (IP, 03/11/2026).',
     limitations: [
       'Sustituye a Morisky-Green (citado en el protocolo aprobado, p. 12) por decisión de los investigadores (03/11/2026).',
-      'El documento no acredita que sea una versión española validada (adaptación transcultural) ni el permiso de uso de los autores; no incluye pie de versión ni copyright.',
+      'Permiso de uso para el estudio confirmado por los investigadores (03/11/2026). El documento no acredita que sea una versión española validada (adaptación transcultural) ni incluye pie de versión ni copyright.',
       'El texto introductorio del documento es idéntico al de VERITAS-PRN (pide pensar en un episodio de sangrado habitual), aunque los ítems se refieren a la profilaxis: se reproduce tal cual; confirmar con el IP.',
       'Aplicable en principio a régimen de profilaxis; texto centrado en hemofilia e infusiones de factor: aplicabilidad en EVW y terapias no sustitutivas (p. ej., subcutáneas), pendiente del IP.',
     ],

@@ -18,7 +18,9 @@ Incorporado el 03/11/2026 (migraciones `coag_veritas_scoring` y `coag_visit_evol
 - **Evolución farmacéutica por visita** (`#/visits/:visitId/evolution`) con versiones y botón «Copiar evolución para historia clínica».
 - **Evolución V0–VF integrada** (CMO, cuestionarios y variables clínicas) y **Documentación y cuestionarios** en «Proyecto».
 
-Pendiente: actuaciones de AF por prioridad (catálogo de las tablas 5-7 del modelo), comentarios EVASAF y revisión del CRD con «DATOS CLÍNICOS» (documentos no aportados).
+**Actuaciones de AF por prioridad** (`#/visits/:visitId/interventions`): catálogo de las Tablas 5-6 del modelo CMO; prevista/realizada por visita; incluidas en la copia para HC y en la exportación.
+
+Pendiente: Tabla 7 (Prioridad 1) legible para completar el catálogo; revisión del CRD con «DATOS CLÍNICOS» (documento no aportado).
 
 ## Arquitectura
 

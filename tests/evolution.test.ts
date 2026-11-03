@@ -31,6 +31,11 @@ describe('texto para la historia clínica', () => {
   it('sin estratificación completada en la visita: lo indica, no la inventa', () => {
     expect(buildClinicalNote({ ...base, stratification: null })).toContain('Estratificación CMO: no completada en esta visita.');
   });
+  it('incluye solo las actuaciones realizadas que se le pasan, con ámbito y fecha', () => {
+    const note = buildClinicalNote({ ...base, stratification: null, performedActions: [{ domainLabel: 'Coordinación con el equipo asistencial', text: 'Llamada a hematología', date: '2026-11-02' }] });
+    expect(note.endsWith('Actuaciones farmacéuticas realizadas:\n- Coordinación con el equipo asistencial: Llamada a hematología (02/11/2026)')).toBe(true);
+    expect(buildClinicalNote({ ...base, stratification: null, performedActions: [] })).not.toContain('Actuaciones farmacéuticas');
+  });
   it('prioridad del modelo sin elevación ni puntuación', () => {
     expect(buildClinicalNote({ ...base, stratification: { finalPriority: 3, modelPriority: 3, score: null, raised: false, modelVersion: null } }))
       .toContain('Estratificación CMO: prioridad 3.');

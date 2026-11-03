@@ -57,6 +57,13 @@ export const TABLE_REQUESTS = {
   },
   // Evolución farmacéutica (texto libre incluido por decisión del investigador, 03/11/2026).
   evolutions: { table: 'coag_visit_evolutions', columns: 'visit_id,evolution_text,revision,created_at,updated_at', orderBy: 'visit_id' },
+  // Actuaciones de AF: catálogo (Tablas 5-6 del modelo) y registros (followup_note es texto libre).
+  intervention_catalog: { table: 'coag_intervention_catalog', columns: 'code,catalog_version,domain,applies_to_priorities,source_table,sort_order,action_text,is_active', orderBy: 'code' },
+  interventions: {
+    table: 'coag_interventions',
+    columns: 'id,visit_id,catalog_code,custom_text,domain,status,performed_date,followup_note,priority_context,recommended_for_priority,revision,created_at,updated_at',
+    orderBy: 'id',
+  },
   // Vista: fecha esperada y ventana de la visita final (basal + 12 meses ±1 mes, protocolo p. 14).
   schedule: {
     table: 'coag_patient_schedule',
@@ -105,6 +112,8 @@ const QREASON_VALUES = {
 };
 const MODE_VALUES = { self: 'Autoadministrado', assisted: 'Con ayuda', interviewer: 'Por entrevista' };
 const DATA_SOURCE_VALUES = { electronic: 'Electrónico', paper: 'Papel' };
+const INTERVENTION_DOMAIN_VALUES = { pharmacotherapeutic_followup: 'Seguimiento farmacoterapéutico', patient_education: 'Educación, formación y seguimiento del paciente', care_coordination: 'Coordinación con el equipo asistencial' };
+const INTERVENTION_STATUS_VALUES = { planned: 'Prevista', performed: 'Realizada', discarded: 'Anulada (registro erróneo)' };
 const STRAT_STATUS_VALUES = { in_progress: 'En curso (borrador)', completed: 'Completada' };
 
 const c = (name: string, label: string, type: ColumnType, source: string, extra: Partial<ColumnSpec> = {}): ColumnSpec => ({ name, label, type, source, ...extra });
@@ -415,6 +424,39 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
       rows: raw.schedule,
     },
     {
+      id: 'catalogo_actuaciones', folder: 'raw', title: 'Catálogo de actuaciones de AF (modelo CMO SEFH v2.0, Tablas 5-6)', grain: 'Una actuación del catálogo', key: ['code'],
+      columns: [
+        c('code', 'Código de la actuación', 'string', 'coag_intervention_catalog.code'),
+        c('catalog_version', 'Versión del catálogo', 'string', 'coag_intervention_catalog.catalog_version'),
+        c('domain', 'Ámbito', 'string', 'coag_intervention_catalog.domain', { values: INTERVENTION_DOMAIN_VALUES }),
+        c('applies_to_priorities', 'Prioridades a las que se aplica (JSON)', 'json', 'coag_intervention_catalog.applies_to_priorities', { definition: 'Tablas acumulativas. Prioridad 1: incompleto hasta cargar la Tabla 7.' }),
+        c('source_table', 'Tabla del modelo en que aparece por primera vez', 'string', 'coag_intervention_catalog.source_table'),
+        c('sort_order', 'Orden en la tabla', 'integer', 'coag_intervention_catalog.sort_order'),
+        c('action_text', 'Texto literal de la actuación', 'string', 'coag_intervention_catalog.action_text'),
+        c('is_active', 'Activa', 'boolean', 'coag_intervention_catalog.is_active', { values: YES_NO }),
+      ],
+      rows: raw.intervention_catalog ?? [],
+    },
+    {
+      id: 'actuaciones', folder: 'raw', title: 'Actuaciones de AF registradas por visita', grain: 'Un registro de actuación', key: ['id'],
+      columns: [
+        c('id', 'Identificador del registro (UUID)', 'string', 'coag_interventions.id'),
+        c('visit_id', 'Identificador de la visita (UUID)', 'string', 'coag_interventions.visit_id'),
+        c('catalog_code', 'Código de catálogo (vacío = actuación adicional)', 'string', 'coag_interventions.catalog_code'),
+        c('custom_text', 'Actuación adicional (texto libre)', 'string', 'coag_interventions.custom_text', { notes: 'Texto libre: revisar antes de compartir.' }),
+        c('domain', 'Ámbito', 'string', 'coag_interventions.domain', { values: INTERVENTION_DOMAIN_VALUES }),
+        c('status', 'Estado', 'string', 'coag_interventions.status', { values: INTERVENTION_STATUS_VALUES, definition: 'Recomendada ≠ realizada: solo «performed» cuenta como realizada; «discarded» = registro anulado por error.' }),
+        c('performed_date', 'Fecha de realización', 'date', 'coag_interventions.performed_date'),
+        c('followup_note', 'Seguimiento / resultado (texto libre)', 'string', 'coag_interventions.followup_note', { notes: 'Texto libre: revisar antes de compartir.' }),
+        c('priority_context', 'Prioridad CMO vigente al registrarla', 'integer', 'coag_interventions.priority_context', { values: PRIORITY_VALUES, rule: 'La fija la BD: última estratificación completada del paciente hasta la fecha de la visita. Vacío = sin estratificación previa.' }),
+        c('recommended_for_priority', 'Estaba recomendada para esa prioridad', 'boolean', 'coag_interventions.recommended_for_priority', { values: YES_NO, definition: 'Vacío en actuaciones adicionales o sin prioridad.' }),
+        c('revision', 'Número de revisión', 'integer', 'coag_interventions.revision'),
+        createdAt('coag_interventions'),
+        updatedAt('coag_interventions'),
+      ],
+      rows: raw.interventions ?? [],
+    },
+    {
       id: 'evolucion_farmaceutica', folder: 'raw', title: 'Evolución farmacéutica por visita (texto libre)', grain: 'Una evolución por visita', key: ['visit_id'],
       columns: [
         c('visit_id', 'Identificador de la visita (UUID)', 'string', 'coag_visit_evolutions.visit_id'),
@@ -489,6 +531,8 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
 
   // ── LONG: una fila por visita ──
   const evolutionByVisit = new Map((raw.evolutions ?? []).map((r) => [r.visit_id as string, r]));
+  const interventionsByVisit = new Map<string, Row[]>();
+  for (const r of raw.interventions ?? []) interventionsByVisit.set(r.visit_id as string, [...(interventionsByVisit.get(r.visit_id as string) ?? []), r]);
   const longColumns: ColumnSpec[] = [
     c('study_code', 'Código de estudio del paciente', 'string', 'coag_patients.study_code'),
     c('center_code', 'Código del centro', 'string', 'coag_centers.code'),
@@ -502,6 +546,8 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
     c('dias_desde_basal', 'Días desde la visita basal', 'integer', 'derivada', { unit: 'días', rule: 'visit_date − fecha de la basal no anulada; vacío si no hay basal.' }),
     c('datos_clinicos_registrados', 'Datos clínicos registrados en la visita', 'boolean', 'derivada', { values: YES_NO, rule: 'Existe registro en coag_clinical_assessments (solo basal y final).' }),
     c('evolucion_farmaceutica_registrada', 'Evolución farmacéutica registrada en la visita', 'boolean', 'derivada', { values: YES_NO, rule: 'Existe registro en coag_visit_evolutions (texto en raw/evolucion_farmaceutica).' }),
+    c('actuaciones_realizadas', 'Actuaciones farmacéuticas realizadas en la visita', 'integer', 'derivada', { rule: 'Nº de registros de coag_interventions con status = performed (no cuenta previstas, anuladas ni recomendadas). 0 = ninguna registrada como realizada.' }),
+    c('actuaciones_previstas', 'Actuaciones farmacéuticas previstas en la visita', 'integer', 'derivada', { rule: 'Nº de registros con status = planned.' }),
     c('evolucion_farmaceutica_revisiones', 'Número de revisión de la evolución farmacéutica', 'integer', 'coag_visit_evolutions.revision', { definition: '1 = sin modificaciones posteriores; vacío = sin evolución.' }),
     ...strataColumns('', ''),
     ...instrumentColumns('', ''),
@@ -522,6 +568,8 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
       dias_desde_basal: daysBetween(schedule?.baseline_date as string | null, v.visit_date as string),
       datos_clinicos_registrados: clinicalByVisit.has(v.id as string),
       evolucion_farmaceutica_registrada: evolutionByVisit.has(v.id as string),
+      actuaciones_realizadas: (interventionsByVisit.get(v.id as string) ?? []).filter((r) => r.status === 'performed').length,
+      actuaciones_previstas: (interventionsByVisit.get(v.id as string) ?? []).filter((r) => r.status === 'planned').length,
       evolucion_farmaceutica_revisiones: (evolutionByVisit.get(v.id as string)?.revision as number | undefined) ?? null,
       ...strataValues(v.id as string, ''),
       ...instrumentValues(v.id as string, ''),

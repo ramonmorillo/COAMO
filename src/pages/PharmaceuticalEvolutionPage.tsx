@@ -11,6 +11,8 @@ import { getOwnProfile } from '../services/coamoDataService';
 import { getEvolution, listEvolutionHistory, saveEvolution, type EvolutionAuditEntry } from '../services/evolutionService';
 import { getPatient, getVisit, type Patient, type Visit } from '../services/patientService';
 import { getStratification, type StratificationRecord } from '../services/stratificationService';
+import { DOMAIN_LABEL, interventionText, performedInterventions, type CatalogAction, type InterventionRecord } from '../domain/interventions';
+import { listCatalog, listInterventionsForVisits } from '../services/interventionService';
 
 type Message = { tone: 'success' | 'danger' | 'info'; text: string };
 
@@ -27,6 +29,7 @@ export function PharmaceuticalEvolutionPage() {
   const [message, setMessage] = useState<Message | null>(null);
   const [isCoordinator, setIsCoordinator] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [actions, setActions] = useState<{ catalog: CatalogAction[]; records: InterventionRecord[] }>({ catalog: [], records: [] });
 
   const load = useCallback(async () => {
     const v = await getVisit(visitId);
@@ -35,7 +38,8 @@ export function PharmaceuticalEvolutionPage() {
       setLoading(false);
       return;
     }
-    const [p, e, s, profile] = await Promise.all([getPatient(v.data.patient_id), getEvolution(visitId), getStratification(visitId), getOwnProfile()]);
+    const [p, e, s, profile, cat, ints] = await Promise.all([getPatient(v.data.patient_id), getEvolution(visitId), getStratification(visitId), getOwnProfile(), listCatalog(), listInterventionsForVisits([visitId])]);
+    setActions({ catalog: cat.data, records: ints.data });
     setVisit(v.data);
     setPatient(p.data);
     setRecord(e.data);
@@ -71,8 +75,9 @@ export function PharmaceuticalEvolutionPage() {
         finalPriority: completed.final_priority, modelPriority: completed.model_priority, score: completed.score,
         raised: Boolean(completed.raised_priority), modelVersion: completed.model_version,
       } : null,
+      performedActions: performedInterventions(actions.records).map((r) => ({ domainLabel: DOMAIN_LABEL[r.domain], text: interventionText(r, actions.catalog), date: r.performed_date })),
     });
-  }, [visit, record, strat]);
+  }, [visit, record, strat, actions]);
 
   if (loading) return <LoadingState label="Cargando evolución farmacéutica..." />;
   if (loadError || !visit || !patient) return <ErrorState title="No se pudo cargar la evolución" message={loadError ?? 'Sin datos.'} />;
@@ -157,7 +162,7 @@ export function PharmaceuticalEvolutionPage() {
           <pre className="coamo-note-preview" style={{ whiteSpace: 'pre-wrap' }}>{preview}</pre>
           <p className="coamo-field-hint">
             Incluye fecha, tipo y modalidad de la visita, la estratificación CMO completada en esa visita y la valoración. No incluye el código del
-            estudio ni otros identificadores. Las actuaciones farmacéuticas se añadirán cuando exista el catálogo aprobado.
+            estudio ni otros identificadores. Incluye las actuaciones farmacéuticas registradas como realizadas en esta visita (no las recomendadas ni las previstas).
           </p>
         </section>
       ) : null}

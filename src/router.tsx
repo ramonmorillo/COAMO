@@ -33,6 +33,7 @@ export const router = createHashRouter([
       { path: '/patients/:id/questionnaires', lazy: async () => ({ Component: (await import('./pages/QuestionnaireEvolutionPage')).QuestionnaireEvolutionPage }) },
       { path: '/visits/:visitId/clinical', element: <ClinicalAssessmentPage /> },
       { path: '/documents/questionnaires/:instrument/print', lazy: async () => ({ Component: (await import('./pages/QuestionnairePrintPage')).QuestionnairePrintPage }) },
+      { path: '/visits/:visitId/interventions', lazy: async () => ({ Component: (await import('./pages/InterventionsPage')).InterventionsPage }) },
       { path: '/visits/:visitId/evolution', lazy: async () => ({ Component: (await import('./pages/PharmaceuticalEvolutionPage')).PharmaceuticalEvolutionPage }) },
       { path: '/visits/:visitId/stratification', lazy: async () => ({ Component: (await import('./pages/StratificationPage')).StratificationPage }) },
       { path: '/visits/:visitId/questionnaires/:instrument', lazy: async () => ({ Component: (await import('./pages/QuestionnaireFormPage')).QuestionnaireFormPage }) },

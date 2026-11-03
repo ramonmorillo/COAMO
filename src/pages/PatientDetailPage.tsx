@@ -329,6 +329,7 @@ function VisitsCard({ patient, visits, onChanged }: { patient: Patient; visits: 
                       <>
                         {v.visit_type === 'baseline' || v.visit_type === 'final' ? <><Link to={`/visits/${v.id}/clinical`}>Datos clínicos</Link>{' · '}</> : null}
                         <Link to={`/visits/${v.id}/stratification`}>Estratificación CMO</Link>
+                        {' · '}<Link to={`/visits/${v.id}/interventions`}>Actuaciones AF</Link>
                         {' · '}<Link to={`/visits/${v.id}/evolution`}>Evolución farmacéutica</Link>
                         {evolutions[v.id] ? <span className="coamo-field-hint"> (registrada)</span> : null}
                         {strata[v.id] ? (

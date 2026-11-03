@@ -20,11 +20,11 @@ cuestionarios originales restantes, EVASAF actualizado, «DATOS CLÍNICOS», mem
 | 2.1 Morisky-Green | Nunca implementado (sin formulario, tabla ni datos); 2 textos informativos | Textos actualizados; **sustituido por VERITAS por decisión de los investigadores (03/11/2026)** | `HomePage.tsx`, `stratification.ts`, `instruments.ts`, `constants/documents.ts` | IMPLEMENTADO Y VERIFICADO |
 | 2.2 VERITAS-Pro bloqueado | Trigger `enforce_questionnaire_administration` rechazaba respuestas («documento no aportado»); la migración prevista nunca se creó | Migración que retira el bloqueo y admite q1-q24 | DERMAPEX `20261103120000_coag_veritas_scoring.sql` | IMPLEMENTADO Y VERIFICADO (aplicado en producción) |
 | 2.3 Puntuación VERITAS | Solo recuentos («clave no aportada») | Clave de los documentos: invertidos, total 24-120, sin imputación, sin cortes ni subescalas; `coamo-q-2`; recálculo auditado de registros previos | `scoring.ts`, `comparison.ts`, migración, `db-tests/71_*` | IMPLEMENTADO Y VERIFICADO (aplicado en producción) |
-| 2.4 EVASAF comentarios | El documento del repositorio no tenía apartado de comentarios | EVASAF actualizado (PDF, 31/10/2026; aportado el 03/11/2026): columna `comments` (solo EVASAF, ≤ 2000, corrección con motivo, auditada), formulario, imprimible, evolución y exportación | DERMAPEX `20261103140000_coag_evasaf_comments.sql`, `db-tests/73_*`; `administration.ts`, `QuestionnaireFormPage.tsx`, `datasets.ts` | IMPLEMENTADO, PENDIENTE DE DESPLIEGUE |
+| 2.4 EVASAF comentarios | El documento del repositorio no tenía apartado de comentarios | EVASAF actualizado (PDF, 31/10/2026; aportado el 03/11/2026): columna `comments` (solo EVASAF, ≤ 2000, corrección con motivo, auditada), formulario, imprimible, evolución y exportación | DERMAPEX `20261103140000_coag_evasaf_comments.sql`, `db-tests/73_*`; `administration.ts`, `QuestionnaireFormPage.tsx`, `datasets.ts` | IMPLEMENTADO Y VERIFICADO (aplicado en producción, 03/11/2026 09:22 UTC) |
 | 2.4 EVASAF total | Sin total (no hay regla) | Se mantiene descriptivo | — | YA EXISTÍA Y SE HA VALIDADO |
 | 2.5 / 7 Biblioteca y repositorio documental | «Proyecto» con datos del dictamen | Registro documental + cuestionarios + imprimibles (auth) | `ProjectPage.tsx`, `constants/documents.ts`, `QuestionnairePrintPage.tsx` | IMPLEMENTADO Y VERIFICADO (originales: pendiente de almacén autenticado) |
 | 3 Datos clínicos | CRD del protocolo pp. 10-12 (`clinicalSchema.ts`) | Ninguno | — | BLOQUEADO: falta «DATOS CLÍNICOS» |
-| 4.1 Actuaciones por prioridad | No implementadas. El catálogo son las tablas 5 (Prioridad 3), 6 (Prioridad 2) y 7 (Prioridad 1) del documento del modelo CMO de coagulopatías SEFH v2.0, pp. 18-25 (`docs/coamo/COAMO_CMO_MODEL_SPEC.md` §4 de DERMAPEX): actuaciones acumulativas en tres ámbitos, cuyo texto literal no está cargado | Ninguno (no se inventan actuaciones) | — | PENDIENTE DE VALIDACIÓN DOCUMENTAL (revisión del investigador) |
+| 4.1 Actuaciones por prioridad | No implementadas | Catálogo de las Tablas 5 (P3) y 6 (P2) del modelo CMO SEFH v2.0, transcritas literalmente de las imágenes aportadas (03/11/2026; pendiente de cotejo), acumulativas (24 actuaciones); registro prevista/realizada/anulada por visita, adicionales con ámbito, seguimiento; prioridad vigente y «recomendada» fijadas por la BD; en la copia para HC, en la evolución V0-VF y en la exportación. **Tabla 7 (P1) no cargada: copia ilegible** | DERMAPEX `20261103150000_coag_interventions.sql`, `db-tests/85_*`; `InterventionsPage.tsx`, `interventions.ts`, `interventionService.ts` | IMPLEMENTADO, PENDIENTE DE DESPLIEGUE (P1: PENDIENTE DE VALIDACIÓN DOCUMENTAL) |
 | 4.2 Evolución farmacéutica | No existía | Tabla 1:1 con la visita, concurrencia, versiones en auditoría, copia para HC | DERMAPEX `20261103130000_coag_visit_evolutions.sql`, `PharmaceuticalEvolutionPage.tsx`, `evolution.ts` | IMPLEMENTADO Y VERIFICADO (aplicado en producción) |
 | 5 Longitudinal V0-VF | Comparación por cuestionario | Tabla integrada CMO + cuestionarios + clínica; exportación con cambios VERITAS | `longitudinal.ts`, `QuestionnaireEvolutionPage.tsx`, `datasets.ts` | IMPLEMENTADO Y VERIFICADO (VERITAS: tras despliegue) |
 | 6 Permisos multicéntricos | Ya en RLS: investigador = centros asignados; coordinador = lectura, escritura y borrado global | Auditoría; sin cambios | — | YA EXISTÍA Y SE HA VALIDADO (decisión pendiente, §4) |
@@ -76,6 +76,17 @@ cuestionarios originales restantes, EVASAF actualizado, «DATOS CLÍNICOS», mem
 | `npm run build` | OK |
 
 No verificado: lectores de pantalla; impresión en todos los navegadores. (El funcionamiento contra el Supabase real se verificó tras aplicar las migraciones: §6.)
+
+## 4 bis. Decisiones y documentos posteriores (03/11/2026)
+
+- VERITAS: **permiso de uso para el estudio confirmado** por los investigadores. Sigue sin acreditarse la validación de la
+  versión española y el texto introductorio de VERITAS-Pro (idéntico al de PRN) no se ha confirmado.
+- Tablas de actuaciones: aportadas como imágenes. Tablas 5 y 6 legibles y cargadas; Tabla 7 ilegible (pendiente de copia en
+  mejor resolución o del texto). Mientras tanto, Prioridad 1 muestra las actuaciones acumuladas de las Tablas 5-6 con aviso.
+- Despliegue de los comentarios EVASAF: el frontend se publicó (09:20 UTC) dos minutos antes de aplicar la migración
+  (09:22 UTC); en ese intervalo los cuestionarios no cargaban. Sin pérdida de datos. Para próximos cambios: aplicar la
+  migración antes de fusionar el PR del frontend.
+- Protección de contraseñas filtradas (Supabase Auth): debe activarla el titular en el panel; no hay herramienta para ello.
 
 ## 5 bis. Defecto corregido en la exportación (anterior a esta revisión)
 

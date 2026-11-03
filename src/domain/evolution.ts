@@ -31,6 +31,8 @@ export type ClinicalNoteInput = {
   evolutionText: string;
   /** Estratificación CMO completada en esa visita (si existe). */
   stratification?: { finalPriority: number | null; modelPriority: number | null; score: number | null; raised: boolean; modelVersion: string | null } | null;
+  /** Actuaciones REALIZADAS registradas en la visita (no las recomendadas ni las previstas). */
+  performedActions?: Array<{ domainLabel: string; text: string; date: string | null }>;
 };
 
 /** Texto profesional, sin identificadores, listo para revisar y pegar en la historia clínica. */
@@ -51,5 +53,9 @@ export function buildClinicalNote(input: ClinicalNoteInput): string {
     lines.push('Estratificación CMO: no completada en esta visita.');
   }
   lines.push('', 'Valoración y evolución:', input.evolutionText.trim());
+  if (input.performedActions && input.performedActions.length > 0) {
+    lines.push('', 'Actuaciones farmacéuticas realizadas:');
+    for (const a of input.performedActions) lines.push(`- ${a.domainLabel}: ${a.text}${a.date ? ` (${formatDate(a.date)})` : ''}`);
+  }
   return lines.join('\n');
 }
