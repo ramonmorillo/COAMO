@@ -12,6 +12,8 @@ Incorporado de DERMAPEX (28/10/2026):
 - **Exportación de investigación** (`#/export`): ZIP completo, conciliado con la BD y verificado (raw, LONG, WIDE V0/VF, ítems, respuestas de la estratificación, incidencias, diccionario, `.sps`, Excel, JSON, manifiesto). [`docs/EXPORTACION_INVESTIGACION.md`](docs/EXPORTACION_INVESTIGACION.md).
 - **Copias de seguridad**: las del proyecto compartido (scripts en `ramonmorillo/dermapex`), verificadas para las tablas COAMO. [`docs/COPIAS_SEGURIDAD.md`](docs/COPIAS_SEGURIDAD.md).
 
+> **Fase de pruebas en curso:** todos los pacientes registrados hasta ahora son ficticios y deben excluirse de cualquier análisis. Ver [`docs/FASE_DE_PRUEBAS.md`](docs/FASE_DE_PRUEBAS.md) (relación de códigos y pasos para cerrarla).
+
 Incorporado el 03/11/2026 (migraciones `coag_veritas_scoring`, `coag_visit_evolutions`, `coag_evasaf_comments`, `coag_interventions` y `coag_interventions_table7` aplicadas y verificadas en Supabase el mismo día; ver [`docs/AUDITORIA_MEJORAS_2026-11.md`](docs/AUDITORIA_MEJORAS_2026-11.md)):
 
 - **Puntuación VERITAS-PRN y VERITAS-Pro** (clave de los documentos del IP; total 24-120, menor = mayor adherencia) y desbloqueo de VERITAS-Pro.
