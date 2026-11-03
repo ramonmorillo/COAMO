@@ -205,7 +205,10 @@ export function syntheticData(options: { patients: number; seed?: number; follow
     });
   }
 
-  return { centers, patients, inclusions, visits, clinical, questionnaires, stratifications, schedule };
+  // Evoluciones farmacéuticas (solo metadatos) en las visitas realizadas impares.
+  const evolutions = visits.filter((v, i) => v.status === 'completed' && i % 2 === 1)
+    .map((v) => ({ visit_id: v.id, revision: 1, created_at: '2026-10-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' }));
+  return { centers, patients, inclusions, visits, clinical, questionnaires, stratifications, schedule, evolutions };
 }
 
 export type MemorySourceOptions = {

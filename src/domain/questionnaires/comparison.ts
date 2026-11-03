@@ -3,13 +3,14 @@
 //     EQ-5D) y solo con ambos completos. Δ = VF − V0.
 //   · Ítems ordinales (dimensiones EQ-5D, EVASAF): solo dirección del cambio según el sentido
 //     documentado de la escala; nunca se promedian ni se suman.
-//   · VERITAS-PRN y VERITAS-Pro: sin dirección (clave de puntuación no documentada).
+//   · VERITAS-PRN y VERITAS-Pro: total 24-120 (menor = más adherencia; documentos de puntuación del IP,
+//     03/11/2026) con Δ solo si ambos totales existen; dirección por ítem según la puntuación recodificada.
 //   · Sin umbrales de mejoría/empeoramiento clínico.
 //   · Cambio de modalidad o versión entre V0 y VF: se avisa expresamente.
 
 import { INSTRUMENTS, instrumentItems, optionsFor, type InstrumentCode } from './instruments';
 import { effectiveStatus, STATUS_LABEL, type AdministrationStatus, type QuestionnaireAdministration } from './administration';
-import type { Eq5dScores, IexpacScores } from './scoring';
+import { veritasItemScore, type Eq5dScores, type IexpacScores, type VeritasScores } from './scoring';
 
 export type ItemChange = 'better' | 'worse' | 'same' | null;
 
@@ -20,6 +21,9 @@ export type ComparisonMetric = {
   vf: number | null;
   delta: number | null;
   scale: string;
+  /** Sentido documentado de la escala; permite rotular el Δ sin confundir signo y mejoría. */
+  direction?: 'higher_is_better' | 'lower_is_better';
+  change?: ItemChange;
 };
 
 export type ComparisonItem = { code: string; label: string; v0: number | null; vf: number | null; v0Label: string; vfLabel: string; change: ItemChange };
@@ -116,9 +120,25 @@ export function compareInstrument(
     if (af && !sf?.profile_complete) warnings.push('VF: perfil incompleto (falta alguna dimensión).');
     warnings.push('Índice de utilidad no calculado: no hay tarifa de valoración aprobada.');
   }
-  if (code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
+  if (code === 'EVASAF') {
     paired = a0 !== null && af !== null;
   }
+  if (code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
+    const s0 = a0?.scores as VeritasScores | undefined;
+    const sf = af?.scores as VeritasScores | undefined;
+    const t0 = typeof s0?.total === 'number' ? s0.total : null;
+    const tf = typeof sf?.total === 'number' ? sf.total : null;
+    paired = t0 !== null && tf !== null;
+    for (const [label, a, sc] of [['V0', a0, s0], ['VF', af, sf]] as const) {
+      if (!a || !sc) continue;
+      if (sc.complete !== true) warnings.push(`${label} incompleto (${sc.items_answered ?? 0}/24): sin puntuación total; no se imputa.`);
+      else if (typeof sc.total !== 'number') warnings.push(`${label}: puntuación total no disponible en la BD (versión de puntuación ${a.scoring_version ?? '—'}); pendiente de recalcular con la migración de puntuación VERITAS.`);
+    }
+    metrics.push({ key: 'total', label: `${def.shortName} total`, v0: t0, vf: tf, delta: delta(t0, tf), scale: '24-120',
+      direction: 'lower_is_better', change: ordinalChange(t0, tf, false) });
+  }
+  if (code === 'IEXPAC') metrics.forEach((m) => { m.direction = 'higher_is_better'; m.change = ordinalChange(m.v0, m.vf, true); });
+  if (code === 'EQ5D3L') metrics.forEach((m) => { m.direction = 'higher_is_better'; m.change = ordinalChange(m.v0, m.vf, true); });
 
   const items: ComparisonItem[] = instrumentItems(code)
     .filter((item) => item.kind !== 'vas')
@@ -130,6 +150,10 @@ export function compareInstrument(
       let change: ItemChange = null;
       if (code === 'IEXPAC' || code === 'EVASAF') change = ordinalChange(x0, xf, true);
       if (code === 'EQ5D3L') change = ordinalChange(x0, xf, false);
+      if ((code === 'VERITAS_PRN' || code === 'VERITAS_PRO') && item.number) {
+        const n = item.number;
+        change = ordinalChange(x0 === null ? null : veritasItemScore(code, n, x0), xf === null ? null : veritasItemScore(code, n, xf), false);
+      }
       return {
         code: item.code,
         label: item.number ? `${item.number}. ${item.title ?? item.text}` : item.title ?? item.text,

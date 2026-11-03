@@ -57,10 +57,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Un cambio de COAMO que necesita migraciones nuevas se prueba con la rama homónima de DERMAPEX
+      # (mismo nombre de rama en ambos repositorios) mientras su PR no se ha fusionado; si no existe, main.
+      - name: Resolve canonical migrations branch
+        id: canonical
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/ramonmorillo/dermapex "$BRANCH" >/dev/null 2>&1; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Migraciones canónicas: ramonmorillo/dermapex@$(grep -o 'ref=.*' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)"
+
       - name: Checkout canonical migrations (ramonmorillo/dermapex)
         uses: actions/checkout@v4
         with:
           repository: ramonmorillo/dermapex
+          ref: ${{ steps.canonical.outputs.ref }}
           path: canonical-db
 
       - name: Setup Node

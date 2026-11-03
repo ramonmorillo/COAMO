@@ -254,7 +254,7 @@ export function contextNotes(clinical: ClinicalSnapshot | null, eq5d: Eq5dContex
   const pct = collected === null || expected === null || expected === 0 ? null : Math.round((collected / expected) * 1000) / 10;
   const eqDate = eq5d?.date ? eq5d.date.slice(0, 10).split('-').reverse().join('/') : null;
   return {
-    non_adherence: `Dispensaciones recogidas/previstas (últimos 12 meses): ${pct === null ? 'no calculable' : `${String(pct).replace('.', ',')} % (${collected}/${expected})`}. Morisky-Green: sin formulario en la herramienta.`,
+    non_adherence: `Dispensaciones recogidas/previstas (últimos 12 meses): ${pct === null ? 'no calculable' : `${String(pct).replace('.', ',')} % (${collected}/${expected})`}. Morisky-Green no se recoge en COAMO (la adherencia se mide con VERITAS-PRN/VERITAS-Pro en V0/VF; ver su total en la evolución de cuestionarios).`,
     low_qol: eq5d
       ? `EQ-5D-3L${eqDate ? ` del ${eqDate}` : ''}: perfil ${eq5d.profile ?? 'incompleto'}, EVA ${eq5d.vas ?? '—'}.`
       : 'Sin EQ-5D-3L completado hasta esta visita.',

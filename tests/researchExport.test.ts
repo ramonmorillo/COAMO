@@ -212,12 +212,23 @@ describe('Paquete de exportación COAMO (datos sintéticos)', () => {
 
   it('no exporta columnas de texto libre ni identificadores de profesionales', async () => {
     const { text } = await exportAll(data);
-    for (const path of ['raw/cuestionarios_registros.csv', 'raw/estratificaciones.csv', 'raw/inclusion.csv', 'raw/datos_clinicos.csv']) {
+    for (const path of ['raw/cuestionarios_registros.csv', 'raw/estratificaciones.csv', 'raw/inclusion.csv', 'raw/datos_clinicos.csv', 'raw/evolucion_farmaceutica.csv', 'analisis/long_visitas.csv']) {
       const header = parseCsv(text(path), ',')[0];
-      for (const banned of ['status_reason_detail', 'last_correction_reason', 'raised_reason', 'restratification_reason', 'created_by', 'updated_by', 'assessed_by']) {
+      for (const banned of ['status_reason_detail', 'last_correction_reason', 'raised_reason', 'restratification_reason', 'created_by', 'updated_by', 'assessed_by', 'evolution_text']) {
         expect(header, `${path}.${banned}`).not.toContain(banned);
       }
     }
+  });
+
+  it('evolución farmacéutica: existencia y revisión por visita, sin texto', async () => {
+    const { text } = await exportAll(data);
+    const raw = parseCsv(text('raw/evolucion_farmaceutica.csv'), ',');
+    expect(raw[0]).toEqual(['visit_id', 'revision', 'created_at', 'updated_at']);
+    expect(raw.length - 1).toBe(data.evolutions.length);
+    const long = parseCsv(text('analisis/long_visitas.csv'), ',');
+    const col = long[0].indexOf('evolucion_farmaceutica_registrada');
+    expect(col).toBeGreaterThan(-1);
+    expect(long.slice(1).filter((r) => r[col] === '1' || r[col] === 'true').length).toBe(data.evolutions.length);
   });
 
   it('Excel y JSON contienen todas las filas y los valores originales', async () => {

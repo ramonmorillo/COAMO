@@ -15,7 +15,7 @@ import {
   ADMINISTRATION_MODE_LABEL, EQ5D_VAS_SCALE, EQ5D_VAS_TEXT, INSTRUMENTS, INSTRUMENT_CODES, optionsFor,
   type AdministrationMode, type InstrumentCode, type QuestionnaireItem,
 } from '../domain/questionnaires/instruments';
-import { computeScores, formatScore, isComplete, progress, type Eq5dScores, type IexpacScores } from '../domain/questionnaires/scoring';
+import { computeScores, formatScore, isComplete, progress, type Eq5dScores, type IexpacScores, type VeritasScores } from '../domain/questionnaires/scoring';
 import { DIAGNOSIS_LABEL, formatDate, todayIso } from '../domain/study';
 import { getOwnProfile } from '../services/coamoDataService';
 import {
@@ -197,6 +197,7 @@ function QuestionnaireForm({ visitId, instrument }: { visitId: string; instrumen
 
   const iexpac = code === 'IEXPAC' ? (scores as IexpacScores) : null;
   const eq5d = code === 'EQ5D3L' ? (scores as Eq5dScores) : null;
+  const veritas = code === 'VERITAS_PRN' || code === 'VERITAS_PRO' ? (scores as VeritasScores) : null;
 
   return (
     <div className="page-stack">
@@ -300,7 +301,12 @@ function QuestionnaireForm({ visitId, instrument }: { visitId: string; instrumen
             {eq5d ? (
               <>Perfil: <strong>{eq5d.profile ?? `incompleto (${eq5d.dimensions_answered}/5)`}</strong> · EVA: <strong>{eq5d.vas ?? '—'}</strong> · Índice de utilidad: no calculado (sin tarifa aprobada)</>
             ) : null}
-            {code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO' ? <>{def.scoringSummary}</> : null}
+            {veritas ? (
+              veritas.total !== null
+                ? <>{def.shortName} total (24-120; menor = mayor adherencia): <strong>{veritas.total}</strong>. Sin puntos de corte documentados.</>
+                : <>{def.shortName} total: no calculable ({veritas.items_answered}/24 ítems respondidos; no se imputan ausentes).</>
+            ) : null}
+            {code === 'EVASAF' ? <>{def.scoringSummary}</> : null}
             {code === 'IEXPAC' ? <p className="coamo-field-hint" style={{ marginTop: 'var(--sp-2)' }}>{def.scoringSummary}</p> : null}
           </div>
         </section>

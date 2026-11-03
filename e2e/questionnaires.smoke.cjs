@@ -169,7 +169,7 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   ok(writes.some(w => w.body.instrument_code === 'EQ5D3L' && w.body.administration_mode === 'interviewer' && w.body.responses.vas === 0), 'EQ-5D: modalidad entrevista y EVA 0 enviadas');
 
   await page.goto('http://127.0.0.1:4180/COAMO/#/patients/p1/questionnaires');
-  await page.getByRole('heading', { name: 'Evolución de cuestionarios V0–VF' }).waitFor();
+  await page.getByRole('heading', { name: 'Evolución V0–VF' }).waitFor();
   ok(await page.getByText('IEXPAC VF: pendiente', { exact: false }).count() > 0 || await page.getByText(/IEXPAC · VF: Pendiente/).count() > 0, 'evolución: identifica cuestionarios pendientes');
   ok(await page.getByText('Requiere V0 y VF completos (11 ítems)').isVisible(), 'evolución: sin Δ IEXPAC sin par completo');
   await page.screenshot({ path: '' + (process.env.SHOTS || '/tmp') + '/evolution.png', fullPage: true });

@@ -60,6 +60,10 @@ export type InstrumentDefinition = {
   scoringSummary: string;
   directionNote: string;
   limitations: string[];
+  /** Referencia bibliográfica tal como figura en el documento aportado (ausente si el documento no la incluye). */
+  reference?: string;
+  /** Documento(s) de origen de la puntuación. */
+  scoringSource?: string;
 };
 
 // ── IEXPAC ──────────────────────────────────────────────────────────────────
@@ -384,13 +388,14 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
       'El ítem 2 contiene dos afirmaciones en el documento; se reproduce tal cual.',
       'Errata del documento («Marque con na X») corregida a «una X».',
     ],
+    reference: 'Monje-Agudo P, Borrego-Izquierdo Y, Robustillo-Cortés MdeL, Jiménez-Galán R, Almeida-González CV, Morillo-Verdugo RA. Diseño y validación de una encuesta de satisfacción con la atención farmacéutica recibida en las consultas de farmacia hospitalaria. Farm Hosp. 2015;39(3):152-6. doi: 10.7399/fh.2015.39.3.8366. PMID: 26005890.',
   },
   VERITAS_PRN: {
     code: 'VERITAS_PRN',
     shortName: 'VERITAS-PRN',
     name: 'VERITAS-PRN',
     construct: 'Adherencia al tratamiento a demanda en hemofilia (6 bloques de 4 ítems; referencia a los últimos tres meses).',
-    source: 'Documento «VERITAS-PRN» (IP, 14/10/2026).',
+    source: 'Documento «VERITAS-PRN» (IP, 14/10/2026); clave de puntuación: «VERITAS-PRN puntuación» (IP, 03/11/2026).',
     available: true,
     modes: ['self', 'assisted', 'interviewer'],
     instructions: { default: VERITAS_PRN_INTRO },
@@ -401,11 +406,13 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
       items: block.texts.map((text, i) => ({ code: `q${b * 4 + i + 1}`, number: b * 4 + i + 1, text })),
     })),
     coreItemCodes: range(1, 24),
-    scoringSummary: 'Sin puntuación: el documento no incluye clave de puntuación, ítems invertidos, rangos ni regla de datos ausentes. Se registran los códigos de respuesta (1 = Siempre … 5 = Nunca).',
-    directionNote: 'No se interpreta la dirección del cambio: hay ítems redactados en sentido opuesto (p. ej., 6, 7, 12, 17) y la clave no está documentada.',
+    scoringSummary: 'Cada ítem puntúa de 1 (comportamiento de máxima adherencia) a 5 (mínima adherencia) según el sentido de la pregunta: ítems 6, 7, 12, 13, 17, 19, 20 y 23 invertidos (Siempre = 5 … Nunca = 1); resto Siempre = 1 … Nunca = 5. Total = suma de los 24 ítems, de 24 (máxima adherencia) a 120 (mínima). Solo con los 24 ítems respondidos: el documento no define regla para respuestas ausentes, no se imputa. Sin puntos de corte ni subescalas (no definidos en el documento de puntuación).',
+    directionNote: 'Menor puntuación = mayor adherencia. Un descenso del total entre V0 y VF indica cambio hacia mayor adherencia (sin umbral de relevancia clínica documentado).',
+    reference: 'Duncan NA, Kronenberger WG, Roberson CP, Shapiro AD. VERITAS-PRN: a new measure of adherence to episodic treatment regimens in haemophilia. Haemophilia. 2010 Jan;16(1):47-53. doi: 10.1111/j.1365-2516.2009.02094.x. PMID: 19754842.',
+    scoringSource: 'Documento «VERITAS-PRN puntuación» (IP, 03/11/2026).',
     limitations: [
-      'No figura en el protocolo COAMO revisado (que cita Morisky-Green para adherencia): confirmar enmienda/aprobación.',
-      'El documento no acredita que sea una versión española validada ni el permiso de uso.',
+      'Sustituye a Morisky-Green, que es el instrumento de adherencia citado en el protocolo aprobado por el CEIm (30/08/2026, p. 12): confirmar enmienda o comunicación al CEIm.',
+      'El documento no acredita que sea una versión española validada (adaptación transcultural) ni el permiso de uso de los autores.',
       'Aplicable en principio a régimen a demanda; texto centrado en hemofilia e infusiones de factor: aplicabilidad en EVW y terapias no sustitutivas, pendiente del IP.',
     ],
   },
@@ -414,7 +421,7 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     shortName: 'VERITAS-Pro',
     name: 'VERITAS-Pro',
     construct: 'Adherencia al tratamiento profiláctico en hemofilia (6 bloques de 4 ítems; referencia a los últimos tres meses).',
-    source: 'Documento «VERITAS-Pro» (IP, 27/10/2026).',
+    source: 'Documento «VERITAS-Pro» (IP, 27/10/2026); clave de puntuación: «VERITAS-Pro puntuación» (IP, 03/11/2026).',
     available: true,
     modes: ['self', 'assisted', 'interviewer'],
     instructions: { default: VERITAS_PRN_INTRO },
@@ -425,11 +432,13 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
       items: block.texts.map((text, i) => ({ code: `q${b * 4 + i + 1}`, number: b * 4 + i + 1, text })),
     })),
     coreItemCodes: range(1, 24),
-    scoringSummary: 'Sin puntuación: el documento no incluye clave de puntuación, ítems invertidos, rangos ni regla de datos ausentes. Se registran los códigos de respuesta (1 = Siempre … 5 = Nunca).',
-    directionNote: 'No se interpreta la dirección del cambio: hay ítems redactados en sentido opuesto (p. ej., 6, 7, 11, 13, 14, 16-20, 23) y la clave no está documentada.',
+    scoringSummary: 'Cada ítem puntúa de 1 (comportamiento de máxima adherencia) a 5 (mínima adherencia) según el sentido de la pregunta: ítems 6, 7, 11, 13, 14, 16, 17, 18, 19, 20 y 23 invertidos (Siempre = 5 … Nunca = 1); resto Siempre = 1 … Nunca = 5. Total = suma de los 24 ítems, de 24 (máxima adherencia) a 120 (mínima). Solo con los 24 ítems respondidos: el documento no define regla para respuestas ausentes, no se imputa. Sin puntos de corte ni subescalas (no definidos en el documento de puntuación).',
+    directionNote: 'Menor puntuación = mayor adherencia. Un descenso del total entre V0 y VF indica cambio hacia mayor adherencia (sin umbral de relevancia clínica documentado).',
+    reference: 'Duncan N, Kronenberger W, Roberson C, Shapiro A. VERITAS-Pro: a new measure of adherence to prophylactic regimens in haemophilia. Haemophilia. 2010 Mar;16(2):247-55. doi: 10.1111/j.1365-2516.2009.02129.x. PMID: 19925631.',
+    scoringSource: 'Documento «VERITAS-Pro puntuación» (IP, 03/11/2026).',
     limitations: [
-      'No figura en el protocolo COAMO revisado (que cita Morisky-Green para adherencia): confirmar enmienda/aprobación.',
-      'El documento no acredita que sea una versión española validada ni el permiso de uso; no incluye pie de versión ni copyright.',
+      'Sustituye a Morisky-Green, que es el instrumento de adherencia citado en el protocolo aprobado por el CEIm (30/08/2026, p. 12): confirmar enmienda o comunicación al CEIm.',
+      'El documento no acredita que sea una versión española validada (adaptación transcultural) ni el permiso de uso de los autores; no incluye pie de versión ni copyright.',
       'El texto introductorio del documento es idéntico al de VERITAS-PRN (pide pensar en un episodio de sangrado habitual), aunque los ítems se refieren a la profilaxis: se reproduce tal cual; confirmar con el IP.',
       'Aplicable en principio a régimen de profilaxis; texto centrado en hemofilia e infusiones de factor: aplicabilidad en EVW y terapias no sustitutivas (p. ej., subcutáneas), pendiente del IP.',
     ],
