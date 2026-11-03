@@ -19,13 +19,15 @@ Ausente = celda vacía (nunca 0 ni −999). Las puntuaciones son las guardadas p
 ## 2. Contenido del ZIP
 
 - `raw/`: `centros`, `pacientes`, `inclusion`, `visitas`, `datos_clinicos`, `cuestionarios_registros`, `estratificaciones`,
-  `calendario_final` (vista `coag_patient_schedule`).
+  `calendario_final` (vista `coag_patient_schedule`), `evolucion_farmaceutica` (solo metadatos: visita, revisión, fechas).
 - `analisis/long_visitas`: una fila por visita o contacto (estado, modalidad, días desde la basal, estratificación y
-  estado/derivados de cada instrumento).
+  estado/derivados de cada instrumento; `evolucion_farmaceutica_registrada` y `_revisiones`).
 - `analisis/wide_pacientes`: una fila por paciente; sufijos `_v0` (basal) y `_vf` (final): datos clínicos del protocolo
   (pp. 10-12), estratificación, cuestionarios e ítems IEXPAC; cambios `iexpac_global_cambio_vf_v0` (variable principal),
-  `eq5d_eva_cambio_vf_v0` y `cmo_puntuacion_cambio_vf_v0`, **solo en pares completos**.
-- `analisis/cuestionarios_items`: una fila por ítem (código de respuesta y aplicabilidad de los condicionados IEXPAC).
+  `eq5d_eva_cambio_vf_v0`, `cmo_puntuacion_cambio_vf_v0`, `vprn_total_cambio_vf_v0` y `vpro_total_cambio_vf_v0`
+  (VERITAS: negativo = hacia mayor adherencia), **solo en pares completos**. Totales `vprn_total_v0/vf`, `vpro_total_v0/vf`.
+- `analisis/cuestionarios_items`: una fila por ítem (código de respuesta, aplicabilidad de los condicionados IEXPAC y
+  `puntos` del ítem según la clave VERITAS, calculados por la BD con `coamo-q-2`).
 - `analisis/estratificaciones_respuestas`: una fila por pregunta del modelo (respuesta, puntos del modelo, propuesta desde
   los datos clínicos y si coincide).
 - `analisis/incidencias_integridad`: errores (huérfanos, duplicados, datos clínicos fuera de basal/final, valores no
@@ -37,7 +39,7 @@ Ausente = celda vacía (nunca 0 ni −999). Las puntuaciones son las guardadas p
 
 Identificadores de profesionales (`created_by`, `updated_by`, `assessed_by`, `last_corrected_by`) y **texto libre**:
 `status_reason_detail`, `last_correction_reason` (cuestionarios) y `raised_reason`, `restratification_reason`,
-`last_correction_reason` (estratificación). Se mantiene así el criterio previo de COAMO («sin texto libre»).
+`last_correction_reason` (estratificación) y `evolution_text` (evolución farmacéutica). Se mantiene así el criterio previo de COAMO («sin texto libre»).
 Sí se exportan dos textos que son variables del protocolo: `hemostatic_agent` y `target_joint_detail` (la BD limita su
 longitud y la interfaz indica no escribir datos identificativos).
 
