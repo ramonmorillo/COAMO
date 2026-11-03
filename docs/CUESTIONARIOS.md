@@ -3,7 +3,7 @@
 Estado: implementado en frontend (este repositorio) y en el historial canónico de migraciones (`ramonmorillo/dermapex`,
 `supabase/migrations/20261026120000_coag_questionnaires.sql` + `db-tests/70_coag_questionnaires.sql`).
 **Migración aplicada en Supabase** (`coag_questionnaires`, versión registrada 20261026161652; comprobado el 28/10/2026): ver §8.
-**VERITAS-Pro (27/10/2026)**: implementado en el frontend; la BD necesita una migración adicional (§9) antes de poder guardar respuestas.
+**VERITAS (03/11/2026)**: claves de puntuación aportadas por el IP e implementadas (frontend y migración `20261103120000_coag_veritas_scoring.sql` de `ramonmorillo/dermapex`, **pendiente de aplicar en Supabase**; §9). Hasta aplicarla, la BD sigue rechazando respuestas de VERITAS-Pro.
 
 ## 1. Fuentes y clasificación de los documentos
 
@@ -13,8 +13,10 @@ Estado: implementado en frontend (este repositorio) y en el historial canónico 
 | EQ-5D-3L_autoadministrado.docx | Escala (PROM), modalidad autoadministrada | `EQ-5D-3L-ES-ES-v2.0-self` (pie: «Spain (Spanish) v2.0») | Perfil y EVA: definición del instrumento. **Sin índice** |
 | EQ-5D-3L_administrado_por_profesional.docx | **Mismo instrumento**, modalidad entrevista | `EQ-5D-3L-ES-ES-v1.0-interviewer` (pie: «Spain (Spanish) v1.0») | Igual |
 | PROYECTO_EVASAF.docx | Encuesta validada de satisfacción (Monje-Agudo 2015) | `EVASAF-FarmHosp2015-10it` | Solo escala de ítem 1-5; **sin total** |
-| VERITAS-PRN.docx | Escala de adherencia (tratamiento a demanda) | `VERITAS-PRN-ES-COAMO-2026-10-14` | **No documentada**: sin puntuación |
-| VERITAS-Pro.docx | Escala de adherencia (tratamiento profiláctico) | `VERITAS-Pro-ES-COAMO-2026-10-27` | **No documentada**: sin puntuación |
+| VERITAS-PRN.docx + VERITAS-PRN_puntuación.docx | Escala de adherencia (tratamiento a demanda) | `VERITAS-PRN-ES-COAMO-2026-10-14` (textos idénticos) | Documento de puntuación (IP, 03/11/2026); Duncan 2010, PMID 19754842 |
+| VERITAS-Pro.docx + VERITAS-Pro_puntuación.docx | Escala de adherencia (tratamiento profiláctico) | `VERITAS-Pro-ES-COAMO-2026-10-27` (textos idénticos) | Documento de puntuación (IP, 03/11/2026); Duncan 2010, PMID 19925631 |
+
+Los PDF «VERITAS-PRN/Pro cuestionario» (03/11/2026) son las hojas de cumplimentación (sin códigos) con la referencia; se usan como formato imprimible de referencia (§10).
 
 Ninguno de los seis documentos es un formulario de datos del estudio: son instrumentos. Los metadatos de la administración
 (fecha, modalidad, origen, estado, motivo) son variables técnicas de COAMO, no del instrumento.
@@ -58,11 +60,11 @@ sobrescribe. Los borradores viven en la BD (estado «en curso»); **nada clínic
 | IEXPAC | Suma ítems 1-11 (11-55) y global = 10 × (suma − 11) / 44 (0-10) solo con 11 ítems; 4 decimales guardados, 2 mostrados | Imputación de ausentes; uso de ítems 12-15 (no definido); clasificación de respondedores con MCID 1 (P p. 13 solo lo usa para el tamaño muestral) |
 | EQ-5D-3L | Perfil de 5 dígitos (solo completo); EVA 0-100 independiente; 0 válido | Índice de utilidad (sin tarifa aprobada); suma de dimensiones |
 | EVASAF | Ítems 1-5 y completitud | Total o media (ni documento ni protocolo lo definen) |
-| VERITAS-PRN | Códigos de respuesta y completitud por bloque | Puntuación, ítems invertidos, dirección (clave no aportada) |
-| VERITAS-Pro | Códigos de respuesta y completitud por bloque (Periodicidad, Dosis, Planificación, Recordatorio, Omisión, Comunicación) | Puntuación, ítems invertidos, dirección (clave no aportada) |
+| VERITAS-PRN | Puntos por ítem (1 máxima – 5 mínima adherencia; invertidos 6, 7, 12, 13, 17, 19, 20, 23); total 24-120 solo con 24 ítems; completitud por bloque. `coamo-q-2` | Subescalas (el documento de puntuación solo define el total); imputación; puntos de corte |
+| VERITAS-Pro | Igual; invertidos 6, 7, 11, 13, 14, 16, 17, 18, 19, 20, 23 | Igual |
 
-Comparación V0–VF: Δ = VF − V0 solo para IEXPAC global/suma y EVA, y solo con ambas mediciones completas; dimensiones
-EQ-5D e ítems EVASAF/IEXPAC solo como dirección según el sentido documentado de la escala; VERITAS-PRN y VERITAS-Pro sin dirección.
+Comparación V0–VF: Δ = VF − V0 solo para IEXPAC global/suma, EVA y total VERITAS, y solo con ambas mediciones completas; dimensiones
+EQ-5D e ítems EVASAF/IEXPAC/VERITAS solo como dirección según el sentido documentado de la escala (VERITAS: menor = más adherencia; un Δ negativo es un cambio favorable). Cambio individual, sin inferencia estadística.
 Se avisa si cambian modalidad, versión u origen del dato. Sin umbrales clínicos.
 
 ## 4. Pantallas
@@ -103,13 +105,14 @@ en todos los navegadores; importación efectiva en SPSS/R (solo formato).
 
 ## 7. Limitaciones y decisiones pendientes (no suplidas con supuestos)
 
-1. **VERITAS-Pro**: documento aportado el 27/10/2026 e implementado (24 ítems literales, 6 bloques). Sin clave de puntuación,
-   sin pie de versión/copyright ni acreditación de versión española validada. **Incoherencia del documento**: el texto
+1. **VERITAS-Pro**: documento aportado el 27/10/2026 e implementado (24 ítems literales, 6 bloques); clave de puntuación aportada el
+   03/11/2026. Sin pie de versión/copyright ni acreditación de versión española validada. **Incoherencia del documento**: el texto
    introductorio es idéntico al de VERITAS-PRN («piense en un episodio de sangrado habitual…»), aunque los ítems tratan de
    profilaxis; se reproduce literalmente hasta que el IP confirme el texto correcto. Pendiente la migración de BD (§9).
-2. **VERITAS-PRN y VERITAS-Pro no figuran en el protocolo revisado**, que cita **Morisky-Green** para adherencia (P p. 12).
-   Confirmar enmienda/aprobación del CEIm y si Morisky-Green se mantiene (no implementado: sin formulario).
-3. **VERITAS-PRN**: sin clave de puntuación, sin acreditación de versión española validada ni de permiso de uso; aplicabilidad
+2. **VERITAS-PRN y VERITAS-Pro no figuran en el protocolo aprobado por el CEIm (30/08/2026)**, que cita **Morisky-Green** para
+   adherencia (P p. 12). Los investigadores han decidido sustituirlo: **requiere valorar si es una modificación relevante y, en su
+   caso, comunicarla al CEIm**. Morisky-Green nunca tuvo formulario ni datos en COAMO (no hay registros históricos que conservar).
+3. **VERITAS-PRN**: sin acreditación de versión española validada ni de permiso de uso; aplicabilidad
    en EVW y terapias no sustitutivas (texto sobre infusiones de factor) pendiente del IP.
 4. **IEXPAC**: el documento no indica versión ni algoritmo; uso de ítems 12-15 pendiente del IP.
 5. **EQ-5D-3L**: licencia EuroQol y condiciones para cumplimentación electrónica pendientes de confirmar; índice de utilidad
@@ -138,19 +141,26 @@ Proyecto Supabase compartido `dermapex` (ref. `efjpjponblmdjlhmmiet`); última m
 Reversión (solo sin datos reales): `drop table public.coag_questionnaire_administrations;` y las funciones
 `coag_private.questionnaire_*` / `enforce_questionnaire_administration`.
 
-## 9. VERITAS-Pro: cambio pendiente en la base de datos (repositorio `ramonmorillo/dermapex`)
+## 9. VERITAS-PRN y VERITAS-Pro: puntuación y desbloqueo (migración `20261103120000_coag_veritas_scoring.sql`)
 
-La migración 20261026120000 trataba VERITAS-Pro como instrumento sin ítems. Hasta que se aplique una migración nueva, la BD
-rechazará cualquier respuesta de VERITAS-Pro (solo admitirá «no aplicable» / «no realizado»). La migración debe, como espejo
-exacto de `src/domain/questionnaires/instruments.ts` y `scoring.ts`:
+**Causa del mensaje «VERITAS-Pro no tiene versión aprobada en COAMO (documento fuente no aportado): no se admiten respuestas»**:
+un bloqueo explícito del trigger `coag_private.enforce_questionnaire_administration()` (migración 20261026120000), introducido
+porque entonces no existía documento. La migración prevista en la versión anterior de esta sección nunca se creó. No era un
+problema de permisos ni de frontend (el formulario ya validaba 1-5).
 
-1. `coag_private.questionnaire_items()`: VERITAS_PRO con ítems `q1`–`q24`, rango 1-5 (código de posición, no puntuación).
-2. Versión fijada por la BD para VERITAS_PRO: `VERITAS-Pro-ES-COAMO-2026-10-27`.
-3. `coag_private.questionnaire_scores()`: mismo derivado que VERITAS-PRN, con bloques `routine` (1-4), `dosing` (5-8),
-   `planning` (9-12), `remembering` (13-16), `skipping` (17-20), `communicating` (21-24); `scores = null`,
-   `scoring_status = 'scoring_key_not_provided'`.
-4. `db-tests/70_*`: mismos ejemplos que `tests/questionnaireScoring.test.ts` (bloque «VERITAS-Pro»).
+La migración nueva (repositorio `ramonmorillo/dermapex`, rama `claude/elegant-johnson-uk5quo`):
 
-Desplegar la migración **antes** de fusionar este cambio del frontend (o, como mínimo, a la vez). Los registros previos de
-VERITAS-Pro como «no aplicable» con motivo `source_document_unavailable` siguen siendo válidos; revisar si deben reabrirse.
-La exportación pasa a `coamo-q-export-2` (nuevas columnas `vpro_q1`–`vpro_q24` y `vpro_n_answered`).
+1. Admite `q1`–`q24` (1-5) para VERITAS_PRO y fija su versión; retira el bloqueo. Resto de validaciones intactas.
+2. `coag_private.veritas_reversed_items()` y `questionnaire_scores()`: `item_scores`, `total` (24-120, solo con 24 ítems),
+   `direction = lower_is_more_adherent`, `scoring_status`, `subscale_scores = null`. `scoring_version = 'coamo-q-2'` solo para VERITAS.
+3. Recalcula los derivados de los registros VERITAS existentes (en producción, 3 VERITAS-PRN completados a 03/11/2026, consulta de
+   solo lectura): no cambia respuestas; incrementa `revision` y queda auditado. Un formulario abierto en ese momento recibirá el aviso
+   de concurrencia y deberá recargarse.
+4. Pruebas: `db-tests/71_coag_veritas_scoring.sql` (16 aserciones; mismos ejemplos que `tests/questionnaireScoring.test.ts`) y
+   ajuste de `70_*`. Ejecutado en PostgreSQL 16 local: 463 aserciones, todas superadas.
+
+**Orden de despliegue**: aplicar la migración **antes** de publicar este frontend (o a la vez). Sin ella, VERITAS-Pro sigue
+rechazado y los totales aparecen como «pendiente de recalcular» (nunca se calcula un total en el navegador para guardarlo).
+Exportación: `coamo-q-export-3` (`vprn_total`, `vpro_total`, `*_scoring_version`); exportación de investigación: `vprn_total_v0/vf`,
+`vpro_total_v0/vf`, cambios VF − V0 y columna `puntos` en `cuestionarios_items`.
+Los registros previos de VERITAS-Pro «no aplicable» con motivo `source_document_unavailable` siguen siendo válidos: revisar si deben reabrirse.

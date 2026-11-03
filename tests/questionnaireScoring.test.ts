@@ -4,7 +4,25 @@
 import { describe, expect, it } from 'vitest';
 
 import { applicabilityHints, buildAdministrationPayload, isResolved, validateDraft, type DraftState } from '../src/domain/questionnaires/administration';
-import { computeScores, eq5dScores, evasafScores, formatScore, iexpacScores, isComplete, progress, veritasPrnScores, veritasProScores } from '../src/domain/questionnaires/scoring';
+import { computeScores, eq5dScores, evasafScores, formatScore, iexpacScores, isComplete, progress, scoringVersion, VERITAS_REVERSED_ITEMS, veritasItemScore, veritasPrnScores, veritasProScores } from '../src/domain/questionnaires/scoring';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+/** Ítems invertidos leídos del texto del documento de puntuación (opción «Siempre (5)»). */
+function reversedFromDocument(file: string): number[] {
+  const lines = readFileSync(join(__dirname, 'fixtures', 'source', file), 'utf8').split('\n');
+  const out: number[] = [];
+  let current: number | null = null;
+  for (const line of lines) {
+    const m = /^(\d+)\. /.exec(line);
+    if (m) { current = Number(m[1]); continue; }
+    if (current !== null && line.startsWith('☐ Siempre')) {
+      if (/^☐ Siempre \(5\)/.test(line)) out.push(current);
+      current = null;
+    }
+  }
+  return out;
+}
 
 const all = (n: number, value: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`q${i + 1}`, value]));
 
@@ -56,23 +74,74 @@ describe('EQ-5D-3L', () => {
   });
 });
 
-describe('EVASAF, VERITAS-PRN y VERITAS-Pro: sin puntuación no documentada', () => {
-  it('EVASAF: completitud sin total', () => {
+describe('EVASAF: sin puntuación total documentada', () => {
+  it('completitud sin total', () => {
     expect(evasafScores(all(10, 4))).toMatchObject({ complete: true, summary_score: null });
   });
-  it('VERITAS-PRN: recuentos por bloque y sin puntuación', () => {
-    const s = veritasPrnScores({ q1: 1, q2: 2, q5: 5, q24: 3 });
-    expect(s.block_items_answered).toEqual({ treatment: 2, timing: 1, dosing: 0, planning: 0, remembering: 0, communicating: 1 });
-    expect(s.scores).toBeNull();
-    expect(s.complete).toBe(false);
+});
+
+// Clave de los documentos «VERITAS-PRN puntuación» y «VERITAS-Pro puntuación» (IP, 03/11/2026): 1 = máxima
+// adherencia … 5 = mínima; invertidos (Siempre = 5): PRN 6,7,12,13,17,19,20,23; Pro 6,7,11,13,14,16-20,23.
+// Total = suma de los 24 ítems (24-120). Ejemplos calculados a mano.
+const PRN_REV = [6, 7, 12, 13, 17, 19, 20, 23];
+const PRO_REV = [6, 7, 11, 13, 14, 16, 17, 18, 19, 20, 23];
+const pattern = (rev: number[], direct: number, inverted: number) =>
+  Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`q${i + 1}`, rev.includes(i + 1) ? inverted : direct]));
+
+describe('VERITAS-PRN (clave del documento de puntuación)', () => {
+  it('la clave implementada coincide con el documento (opción «Siempre (5)» = invertido)', () => {
+    expect(VERITAS_REVERSED_ITEMS.VERITAS_PRN).toEqual(reversedFromDocument('veritas_prn_scoring.txt'));
   });
-  it('VERITAS-Pro: recuentos por bloque, completitud y sin puntuación', () => {
+  it('máxima adherencia = 24; mínima = 120', () => {
+    expect(veritasPrnScores(pattern(PRN_REV, 1, 5))).toMatchObject({ total: 24, complete: true, scoring_status: 'scored' });
+    expect(veritasPrnScores(pattern(PRN_REV, 5, 1)).total).toBe(120);
+  });
+  it('todo «Siempre» (1) → 16 × 1 + 8 × 5 = 56; todo «Nunca» (5) → 16 × 5 + 8 × 1 = 88; todo «A veces» → 72', () => {
+    expect(veritasPrnScores(all(24, 1)).total).toBe(56);
+    expect(veritasPrnScores(all(24, 5)).total).toBe(88);
+    expect(veritasPrnScores(all(24, 3)).total).toBe(72);
+  });
+  it('puntuación por ítem: q1 directo, q6 invertido', () => {
+    const s = veritasPrnScores({ q1: 2, q6: 2, q24: 3 });
+    expect(s.item_scores).toEqual({ q1: 2, q6: 4, q24: 3 });
+    expect(veritasItemScore('VERITAS_PRN', 13, 1)).toBe(5);
+    expect(veritasItemScore('VERITAS_PRN', 14, 1)).toBe(1);
+  });
+  it('incompleto (23/24): sin total, sin imputación; recuentos por bloque', () => {
+    const r = all(24, 1);
+    delete r.q24;
+    const s = veritasPrnScores(r);
+    expect(s).toMatchObject({ items_answered: 23, complete: false, total: null, scoring_status: 'incomplete_no_total', subscale_scores: null });
+    expect(veritasPrnScores({ q1: 1, q2: 2, q5: 5, q24: 3 }).block_items_answered)
+      .toEqual({ treatment: 2, timing: 1, dosing: 0, planning: 0, remembering: 0, communicating: 1 });
+  });
+});
+
+describe('VERITAS-Pro (clave del documento de puntuación)', () => {
+  it('la clave implementada coincide con el documento', () => {
+    expect(VERITAS_REVERSED_ITEMS.VERITAS_PRO).toEqual(reversedFromDocument('veritas_pro_scoring.txt'));
+  });
+  it('máxima adherencia = 24; mínima = 120', () => {
+    expect(veritasProScores(pattern(PRO_REV, 1, 5)).total).toBe(24);
+    expect(veritasProScores(pattern(PRO_REV, 5, 1)).total).toBe(120);
+  });
+  it('todo «Siempre» → 13 × 1 + 11 × 5 = 68; todo «Nunca» → 13 × 5 + 11 × 1 = 76 (difiere de PRN: clave distinta)', () => {
+    expect(veritasProScores(all(24, 1)).total).toBe(68);
+    expect(veritasProScores(all(24, 5)).total).toBe(76);
+    expect(veritasPrnScores(all(24, 1)).total).not.toBe(veritasProScores(all(24, 1)).total);
+  });
+  it('ejemplo mixto: q11 «Siempre» (invertido) = 5 puntos; q12 «Siempre» = 1', () => {
+    expect(veritasProScores({ q11: 1, q12: 1 }).item_scores).toEqual({ q11: 5, q12: 1 });
+  });
+  it('recuentos por bloque, completitud y estado', () => {
     const s = veritasProScores({ q1: 1, q4: 5, q8: 2, q13: 3, q17: 4, q24: 1 });
     expect(s.block_items_answered).toEqual({ routine: 2, dosing: 1, planning: 0, remembering: 1, skipping: 1, communicating: 1 });
-    expect(s).toMatchObject({ items_expected: 24, items_answered: 6, complete: false, scores: null, scoring_status: 'scoring_key_not_provided' });
+    expect(s).toMatchObject({ items_expected: 24, items_answered: 6, complete: false, total: null, scoring_status: 'incomplete_no_total' });
     const full = computeScores('VERITAS_PRO', all(24, 3));
     expect(isComplete('VERITAS_PRO', full)).toBe(true);
     expect(isComplete('VERITAS_PRO', computeScores('VERITAS_PRO', { q1: 1 }))).toBe(false);
+    expect(scoringVersion('VERITAS_PRO')).toBe('coamo-q-2');
+    expect(scoringVersion('IEXPAC')).toBe('coamo-q-1');
   });
 });
 

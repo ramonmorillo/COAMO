@@ -56,17 +56,31 @@ describe('comparación V0–VF', () => {
     expect(c.warnings.join(' ')).toMatch(/Versión distinta/);
     expect(c.warnings.join(' ')).toMatch(/utilidad no calculado/);
   });
-  it('VERITAS-PRN: sin dirección del cambio (clave no documentada)', () => {
-    const c = compareInstrument('VERITAS_PRN', admin('v0', 'VERITAS_PRN', { q1: 1 }), admin('vf', 'VERITAS_PRN', { q1: 5 }));
-    expect(c.items[0]).toMatchObject({ v0: 1, vf: 5, change: null });
-    expect(c.metrics).toHaveLength(0);
-  });
-  it('VERITAS-Pro: emparejado con ambos completados, sin dirección ni métricas', () => {
-    const c = compareInstrument('VERITAS_PRO', admin('v0', 'VERITAS_PRO', { q1: 2 }), admin('vf', 'VERITAS_PRO', { q1: 1 }));
+  it('VERITAS-PRN: total con Δ y dirección «menor = más adherencia» (ejemplo a mano)', () => {
+    // V0: todo «Siempre» (1) → 16 directos × 1 + 8 invertidos × 5 = 56. VF: máxima adherencia = 24. Δ = −32.
+    const allAlways = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`q${i + 1}`, 1]));
+    const reversed = [6, 7, 12, 13, 17, 19, 20, 23];
+    const best = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`q${i + 1}`, reversed.includes(i + 1) ? 5 : 1]));
+    const c = compareInstrument('VERITAS_PRN', admin('v0', 'VERITAS_PRN', allAlways), admin('vf', 'VERITAS_PRN', best));
+    expect(c.metrics).toEqual([expect.objectContaining({ key: 'total', v0: 56, vf: 24, delta: -32, scale: '24-120', direction: 'lower_is_better', change: 'better' })]);
     expect(c.paired).toBe(true);
+    expect(c.items[0]).toMatchObject({ v0: 1, vf: 1, change: 'same' });
+    expect(c.items[5]).toMatchObject({ code: 'q6', v0: 1, vf: 5, change: 'better' }); // invertido: 5 → 1 punto
+  });
+  it('VERITAS-Pro: incompleto → sin total ni emparejado; dirección por ítem con la clave', () => {
+    const c = compareInstrument('VERITAS_PRO', admin('v0', 'VERITAS_PRO', { q1: 2 }), admin('vf', 'VERITAS_PRO', { q1: 1 }));
+    expect(c.paired).toBe(false);
     expect(c.items).toHaveLength(24);
-    expect(c.items[0]).toMatchObject({ v0: 2, vf: 1, v0Label: 'A menudo', vfLabel: 'Siempre', change: null });
-    expect(c.metrics).toHaveLength(0);
+    expect(c.items[0]).toMatchObject({ v0: 2, vf: 1, v0Label: 'A menudo', vfLabel: 'Siempre', change: 'better' });
+    expect(c.metrics[0]).toMatchObject({ key: 'total', v0: null, vf: null, delta: null });
+    expect(c.warnings.join(' ')).toMatch(/V0 incompleto \(1\/24\)/);
+  });
+  it('VERITAS: registro antiguo sin total (scores previos a coamo-q-2) → aviso, nunca Δ', () => {
+    const r = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`q${i + 1}`, 3]));
+    const old = { items_expected: 24, items_answered: 24, complete: true, block_items_answered: {}, scores: null, scoring_status: 'scoring_key_not_provided' } as never;
+    const c = compareInstrument('VERITAS_PRN', admin('v0', 'VERITAS_PRN', r, { scores: old }), admin('vf', 'VERITAS_PRN', r));
+    expect(c.metrics[0]).toMatchObject({ v0: null, vf: 72, delta: null });
+    expect(c.warnings.join(' ')).toMatch(/pendiente de recalcular/);
   });
   it('dirección ordinal', () => {
     expect(ordinalChange(2, 2, true)).toBe('same');
@@ -167,5 +181,20 @@ describe('cuadro de mando de cumplimiento', () => {
   });
   it('sin datos no hay porcentaje (no 0 %)', () => {
     expect(completionPercentage(questionnaireCompletion([], [], []).total)).toBeNull();
+  });
+});
+
+describe('exportación CSV · VERITAS (coamo-q-export-3)', () => {
+  it('incluye total y versión de puntuación; sin total si está incompleto', () => {
+    const patients = [{ id: 'p1', study_code: 'COAMO-1-0001', center_code: 'LAFE', diagnosis: 'HA', status: 'included' }];
+    const visits = [{ id: 'v0', patient_id: 'p1', visit_type: 'baseline', visit_date: '2026-01-10', status: 'completed' }];
+    const all1 = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`q${i + 1}`, 1]));
+    const bundle = buildExport(patients as never, visits as never, [
+      admin('v0', 'VERITAS_PRN', all1, { scoring_version: 'coamo-q-2' }),
+      admin('v0', 'VERITAS_PRO', { q1: 1 }, { status: 'in_progress', scoring_version: 'coamo-q-2' }),
+    ]);
+    expect(bundle.wide[0]).toMatchObject({ vprn_total: 56, vprn_scoring_version: 'coamo-q-2', vprn_q6: 1, vpro_total: null, vpro_n_answered: 1 });
+    expect(WIDE_COLUMNS.map((c) => c.name)).toEqual(expect.arrayContaining(['vprn_total', 'vpro_total', 'vprn_scoring_version']));
+    expect(dictionaryCsv('standard')).toMatch(/vpro_total.*24-120/);
   });
 });

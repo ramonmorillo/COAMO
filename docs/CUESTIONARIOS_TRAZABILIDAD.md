@@ -70,10 +70,10 @@ La literalidad de cada texto frente al .docx se comprueba en `tests/questionnair
 
 ## VERITAS-PRN
 
-- Documento: VERITAS-PRN.docx
-- Fuente: Documento «VERITAS-PRN» (IP, 14/10/2026).
-- Puntuación: Sin puntuación: el documento no incluye clave de puntuación, ítems invertidos, rangos ni regla de datos ausentes. Se registran los códigos de respuesta (1 = Siempre … 5 = Nunca).
-- Dirección: No se interpreta la dirección del cambio: hay ítems redactados en sentido opuesto (p. ej., 6, 7, 12, 17) y la clave no está documentada.
+- Documento: VERITAS-PRN.docx + VERITAS-PRN_puntuación.docx
+- Fuente: Documento «VERITAS-PRN» (IP, 14/10/2026); clave de puntuación: «VERITAS-PRN puntuación» (IP, 03/11/2026).
+- Puntuación: Cada ítem puntúa de 1 (comportamiento de máxima adherencia) a 5 (mínima adherencia) según el sentido de la pregunta: ítems 6, 7, 12, 13, 17, 19, 20 y 23 invertidos (Siempre = 5 … Nunca = 1); resto Siempre = 1 … Nunca = 5. Total = suma de los 24 ítems, de 24 (máxima adherencia) a 120 (mínima). Solo con los 24 ítems respondidos: el documento no define regla para respuestas ausentes, no se imputa. Sin puntos de corte ni subescalas (no definidos en el documento de puntuación).
+- Dirección: Menor puntuación = mayor adherencia. Un descenso del total entre V0 y VF indica cambio hacia mayor adherencia (sin umbral de relevancia clínica documentado).
 
 | Sección | Nº | Texto del documento | Opciones (código = etiqueta) | Clave BD | Columna CSV |
 |---|---|---|---|---|---|
@@ -104,10 +104,10 @@ La literalidad de cada texto frente al .docx se comprueba en `tests/questionnair
 
 ## VERITAS-Pro
 
-- Documento: VERITAS-Pro.docx
-- Fuente: Documento «VERITAS-Pro» (IP, 27/10/2026).
-- Puntuación: Sin puntuación: el documento no incluye clave de puntuación, ítems invertidos, rangos ni regla de datos ausentes. Se registran los códigos de respuesta (1 = Siempre … 5 = Nunca).
-- Dirección: No se interpreta la dirección del cambio: hay ítems redactados en sentido opuesto (p. ej., 6, 7, 11, 13, 14, 16-20, 23) y la clave no está documentada.
+- Documento: VERITAS-Pro.docx + VERITAS-Pro_puntuación.docx
+- Fuente: Documento «VERITAS-Pro» (IP, 27/10/2026); clave de puntuación: «VERITAS-Pro puntuación» (IP, 03/11/2026).
+- Puntuación: Cada ítem puntúa de 1 (comportamiento de máxima adherencia) a 5 (mínima adherencia) según el sentido de la pregunta: ítems 6, 7, 11, 13, 14, 16, 17, 18, 19, 20 y 23 invertidos (Siempre = 5 … Nunca = 1); resto Siempre = 1 … Nunca = 5. Total = suma de los 24 ítems, de 24 (máxima adherencia) a 120 (mínima). Solo con los 24 ítems respondidos: el documento no define regla para respuestas ausentes, no se imputa. Sin puntos de corte ni subescalas (no definidos en el documento de puntuación).
+- Dirección: Menor puntuación = mayor adherencia. Un descenso del total entre V0 y VF indica cambio hacia mayor adherencia (sin umbral de relevancia clínica documentado).
 
 | Sección | Nº | Texto del documento | Opciones (código = etiqueta) | Clave BD | Columna CSV |
 |---|---|---|---|---|---|

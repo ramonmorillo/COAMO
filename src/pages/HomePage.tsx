@@ -89,7 +89,7 @@ export function HomePage() {
         <p>En preparación:</p>
         <ul className="coamo-pending-list">
           <li>actuaciones de atención farmacéutica por prioridad (la estratificación CMO ya está disponible en cada visita realizada);</li>
-          <li>Morisky-Green (citado en el protocolo; no se ha aportado su formulario).</li>
+          <li>confirmar la sustitución de Morisky-Green (citado en el protocolo aprobado) por VERITAS-PRN/VERITAS-Pro ante el CEIm.</li>
         </ul>
       </section>
     </div>

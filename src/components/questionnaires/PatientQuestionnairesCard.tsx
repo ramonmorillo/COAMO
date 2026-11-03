@@ -6,7 +6,7 @@ import {
   type QuestionnaireAdministration, type StudyVisit,
 } from '../../domain/questionnaires/administration';
 import { INSTRUMENTS, INSTRUMENT_CODES, type InstrumentCode } from '../../domain/questionnaires/instruments';
-import type { IexpacScores } from '../../domain/questionnaires/scoring';
+import type { IexpacScores, VeritasScores } from '../../domain/questionnaires/scoring';
 import { formatScore } from '../../domain/questionnaires/scoring';
 import { formatDate } from '../../domain/study';
 import { listAdministrationsForVisits } from '../../services/questionnaireService';
@@ -50,10 +50,12 @@ export function PatientQuestionnairesCard({ patientId, visits }: Props) {
     const admin = find(moment, code);
     const status = effectiveStatus(admin);
     const iexpac = code === 'IEXPAC' && admin?.status === 'completed' ? (admin.scores as IexpacScores) : null;
+    const veritas = (code === 'VERITAS_PRN' || code === 'VERITAS_PRO') && admin?.status === 'completed' ? (admin.scores as VeritasScores) : null;
     return (
       <div className="coamo-q-cell">
         <StatusBadge tone={STATUS_TONE[status]} dot>{STATUS_LABEL[status]}</StatusBadge>
         {iexpac ? <span className="coamo-q-cell-detail">{iexpac.complete ? `Global ${formatScore(iexpac.global_0_10)}` : 'Incompleto: sin global'}</span> : null}
+        {veritas ? <span className="coamo-q-cell-detail">{typeof veritas.total === 'number' ? `Total ${veritas.total} (24-120; menor = más adherencia)` : veritas.complete ? 'Total pendiente de recalcular' : 'Incompleto: sin total'}</span> : null}
         {admin?.status_reason_code ? <span className="coamo-q-cell-detail">{REASON_LABEL[admin.status_reason_code]}</span> : null}
         {admin?.administration_date ? <span className="coamo-q-cell-detail">{formatDate(admin.administration_date)}</span> : null}
         <Link to={`/visits/${visit.id}/questionnaires/${code}`} aria-label={`${INSTRUMENTS[code].shortName} en ${VISIT_LABEL[moment]}`}>
@@ -67,7 +69,7 @@ export function PatientQuestionnairesCard({ patientId, visits }: Props) {
     <section className="card" aria-labelledby="questionnaires-title">
       <h2 id="questionnaires-title">Cuestionarios y resultados comunicados por el paciente</h2>
       <p className="help-text">
-        Seis instrumentos de los documentos del estudio en la visita basal (V0) y final (VF). Las dos modalidades del EQ-5D-3L
+        Cinco instrumentos (seis documentos) del estudio del estudio en la visita basal (V0) y final (VF). Las dos modalidades del EQ-5D-3L
         (autoadministrada y por entrevista) son un único instrumento: se elige la modalidad al registrarlo. Marca como «No aplicable»
         lo que no proceda clínicamente, con su motivo.
       </p>

@@ -21,7 +21,7 @@ import type { TableRequest } from './reader';
 import type { ColumnSpec, ColumnType, Dataset } from './spec';
 
 /** Algoritmos aplicados por la BD (para el manifiesto). */
-export const QUESTIONNAIRE_SCORING_VERSION = 'coamo-q-1 (coag_private.questionnaire_scores; ver columna scoring_version de cada registro)';
+export const QUESTIONNAIRE_SCORING_VERSION = 'coamo-q-1 (IEXPAC, EQ-5D-3L, EVASAF) / coamo-q-2 (VERITAS-PRN y VERITAS-Pro: total) — coag_private.questionnaire_scores; ver columna scoring_version de cada registro';
 export const STRATIFICATION_SCORING_VERSION = `${STRATIFICATION_MODEL_VERSION} (coag_private.stratification_result; ver columna model_version)`;
 
 // ── Tablas a leer ──────────────────────────────────────────────────────────
@@ -148,8 +148,14 @@ const Q_METRICS: Record<InstrumentCode, Metric[]> = {
     { key: 'vas', suffix: 'eva', label: 'EQ-5D-3L escala visual analógica (0-100)', type: 'integer', rule: 'scores.vas (valor registrado).' },
   ],
   EVASAF: [{ key: 'items_answered', suffix: 'n_respondidos', label: 'EVASAF ítems respondidos (0-10)', type: 'integer', rule: 'scores.items_answered. Sin puntuación total (no hay regla aprobada).' }],
-  VERITAS_PRN: [{ key: 'items_answered', suffix: 'n_respondidos', label: 'VERITAS-PRN ítems respondidos (0-24)', type: 'integer', rule: 'scores.items_answered. Sin puntuación (clave de corrección no aportada).' }],
-  VERITAS_PRO: [{ key: 'items_answered', suffix: 'n_respondidos', label: 'VERITAS-Pro ítems respondidos (0-24)', type: 'integer', rule: 'scores.items_answered. Sin puntuación (clave de corrección no aportada).' }],
+  VERITAS_PRN: [
+    { key: 'items_answered', suffix: 'n_respondidos', label: 'VERITAS-PRN ítems respondidos (0-24)', type: 'integer', rule: 'scores.items_answered.' },
+    { key: 'total', suffix: 'total', label: 'VERITAS-PRN puntuación total (24-120; menor = mayor adherencia)', type: 'integer', rule: 'scores.total = suma de los 24 ítems puntuados 1-5 con ítems 6, 7, 12, 13, 17, 19, 20 y 23 invertidos (documento «VERITAS-PRN puntuación»; Duncan 2010); vacío si falta algún ítem (sin imputación). Sin puntos de corte.' },
+  ],
+  VERITAS_PRO: [
+    { key: 'items_answered', suffix: 'n_respondidos', label: 'VERITAS-Pro ítems respondidos (0-24)', type: 'integer', rule: 'scores.items_answered.' },
+    { key: 'total', suffix: 'total', label: 'VERITAS-Pro puntuación total (24-120; menor = mayor adherencia)', type: 'integer', rule: 'scores.total = suma de los 24 ítems puntuados 1-5 con ítems 6, 7, 11, 13, 14, 16, 17, 18, 19, 20 y 23 invertidos (documento «VERITAS-Pro puntuación»; Duncan 2010); vacío si falta algún ítem (sin imputación). Sin puntos de corte.' },
+  ],
 };
 
 const IEXPAC_ITEM_LABELS = { '1': 'Nunca', '2': 'Casi nunca', '3': 'A veces', '4': 'Casi siempre', '5': 'Siempre' };
@@ -547,6 +553,8 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
     { name: 'iexpac_global_cambio_vf_v0', label: 'Cambio en IEXPAC global (VF − V0). Variable principal', from: 'iexpac_global', type: 'decimal' },
     { name: 'eq5d_eva_cambio_vf_v0', label: 'Cambio en EQ-5D-3L EVA (VF − V0)', from: 'eq5d_eva', type: 'integer' },
     { name: 'cmo_puntuacion_cambio_vf_v0', label: 'Cambio en la puntuación CMO (VF − V0)', from: 'cmo_puntuacion', type: 'integer' },
+    { name: 'vprn_total_cambio_vf_v0', label: 'Cambio en VERITAS-PRN total (VF − V0; negativo = hacia mayor adherencia)', from: 'vprn_total', type: 'integer' },
+    { name: 'vpro_total_cambio_vf_v0', label: 'Cambio en VERITAS-Pro total (VF − V0; negativo = hacia mayor adherencia)', from: 'vpro_total', type: 'integer' },
   ];
   for (const ch of changeVars) {
     wideColumns.push(c(ch.name, ch.label, ch.type, 'derivada', { rule: `${ch.from}_vf − ${ch.from}_v0; vacío si falta alguno (solo pares completos). Redondeo a 4 decimales.` }));
@@ -637,6 +645,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         valor: typeof value === 'number' && Number.isFinite(value) ? value : null,
         valor_original: value === undefined || value === null ? null : typeof value === 'string' ? value : JSON.stringify(value),
         aplica: typeof applies === 'boolean' ? applies : null,
+        puntos: scoreValue((q.scores as Row | null)?.item_scores, item, 'integer'),
       });
     }
   }
@@ -699,6 +708,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         c('valor', 'Código de respuesta', 'integer', 'coag_questionnaire_administrations.responses (valor)', { notes: 'VERITAS: código de posición (1 Siempre … 5 Nunca), no puntuación. EQ-5D-3L: 1-3 (1 = sin problemas); vas 0-100.' }),
         c('valor_original', 'Respuesta tal como está almacenada (texto JSON)', 'string', 'coag_questionnaire_administrations.responses (valor)'),
         c('aplica', 'Ítem condicionado: se cumple la condición', 'boolean', 'coag_questionnaire_administrations.item_applicability', { values: YES_NO, notes: 'Solo IEXPAC q12-q15; vacío en el resto.' }),
+        c('puntos', 'Puntuación del ítem según la clave del instrumento', 'integer', 'coag_questionnaire_administrations.scores.item_scores', { notes: 'Solo VERITAS (1 = máxima adherencia … 5 = mínima; invertidos ya recodificados por la BD, coamo-q-2). Vacío en el resto de instrumentos o en registros sin recalcular.' }),
       ],
       rows: itemRows,
     },

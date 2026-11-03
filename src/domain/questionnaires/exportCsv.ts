@@ -10,7 +10,7 @@ import { INSTRUMENTS, instrumentItems, type InstrumentCode } from './instruments
 import type { QuestionnaireAdministration, StudyVisit } from './administration';
 import type { Eq5dScores, IexpacScores } from './scoring';
 
-export const EXPORT_SCHEMA_VERSION = 'coamo-q-export-2';
+export const EXPORT_SCHEMA_VERSION = 'coamo-q-export-3'; // 3: añade vprn_total / vpro_total y scoring_version (VERITAS).
 
 export type CsvFormat = 'standard' | 'excel_es';
 
@@ -47,7 +47,7 @@ function adminColumns(code: InstrumentCode): Column[] {
         values: '1 = sí; 0 = no; vacío = no registrado', source: 'Documento IEXPAC' });
     }
     const values = item.kind === 'vas' ? '0-100' : code === 'VERITAS_PRN' || code === 'VERITAS_PRO'
-      ? '1 Siempre, 2 A menudo, 3 A veces, 4 Rara vez, 5 Nunca (CÓDIGO, no puntuación)'
+      ? '1 Siempre, 2 A menudo, 3 A veces, 4 Rara vez, 5 Nunca (CÓDIGO de posición; la puntuación del ítem se deriva con la clave)'
       : code === 'EQ5D3L' ? '1-3 (1 = sin problemas)' : code === 'IEXPAC' ? '1 Nunca … 5 Siempre' : '1 muy deficiente … 5 excelente';
     cols.push({ name: `${p}_${item.code}`, label: `${def.shortName} ${item.number ? `ítem ${item.number}` : item.title}: ${item.title ?? item.text}`.slice(0, 200),
       type: 'integer', values, source: def.source });
@@ -67,6 +67,12 @@ function adminColumns(code: InstrumentCode): Column[] {
   }
   if (code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
     cols.push({ name: `${p}_n_answered`, label: `${def.shortName}: ítems respondidos`, type: 'integer', values: `0-${def.coreItemCodes.length}`, source: 'Derivado' });
+  }
+  if (code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
+    cols.push(
+      { name: `${p}_total`, label: `${def.shortName}: puntuación total (solo si 24 ítems; menor = mayor adherencia)`, type: 'integer', values: '24-120', source: def.scoringSource ?? def.source },
+      { name: `${p}_scoring_version`, label: `${def.shortName}: versión del algoritmo de puntuación`, type: 'text', values: 'coamo-q-2', source: 'COAMO' },
+    );
   }
   return cols;
 }
@@ -159,6 +165,11 @@ function adminCells(code: InstrumentCode, admin: QuestionnaireAdministration | u
   }
   if (code === 'EVASAF' || code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
     row[`${p}_n_answered`] = (admin.scores as { items_answered?: number }).items_answered ?? null;
+  }
+  if (code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
+    const total = (admin.scores as { total?: unknown }).total;
+    row[`${p}_total`] = typeof total === 'number' ? total : null;
+    row[`${p}_scoring_version`] = admin.scoring_version ?? null;
   }
   return row;
 }

@@ -12,7 +12,7 @@ import {
 } from '../domain/questionnaires/administration';
 import { CHANGE_LABEL, compareInstrument, type ComparisonMetric, type InstrumentComparison } from '../domain/questionnaires/comparison';
 import { ADMINISTRATION_MODE_LABEL, INSTRUMENTS, INSTRUMENT_CODES, type InstrumentCode } from '../domain/questionnaires/instruments';
-import { formatScore, isComplete } from '../domain/questionnaires/scoring';
+import { formatScore, isComplete, veritasItemScore } from '../domain/questionnaires/scoring';
 import { DIAGNOSIS_LABEL, formatDate, todayIso } from '../domain/study';
 import { listAdministrationsForVisits } from '../services/questionnaireService';
 import { getPatient, listVisits, type Patient, type Visit } from '../services/patientService';
@@ -168,7 +168,9 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
   visitIds: Partial<Record<StudyVisit, string>>;
 }) {
   const def = INSTRUMENTS[code];
-  const showDirection = code !== 'VERITAS_PRN' && code !== 'VERITAS_PRO';
+  const isVeritas = code === 'VERITAS_PRN' || code === 'VERITAS_PRO';
+  const showDirection = true;
+  const itemPoints = (n: string, v: number | null) => (v === null || !isVeritas ? v : veritasItemScore(code, Number(n.slice(1)), v));
   return (
     <section className={`card coamo-break${def.primaryEndpoint ? ' coamo-q-primary-card' : ''}`} aria-labelledby={`evo-${code}`}>
       <h2 id={`evo-${code}`}>
@@ -186,7 +188,7 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
         <div className="table-wrap" style={{ marginTop: 'var(--sp-3)' }}>
           <table>
             <caption className="visually-hidden">Resultados {def.shortName}</caption>
-            <thead><tr><th scope="col">Resultado</th><th scope="col">Escala</th><th scope="col">V0</th><th scope="col">VF</th><th scope="col">Δ VF − V0</th></tr></thead>
+            <thead><tr><th scope="col">Resultado</th><th scope="col">Escala</th><th scope="col">V0</th><th scope="col">VF</th><th scope="col">Δ VF − V0</th><th scope="col">Sentido</th></tr></thead>
             <tbody>
               {cmp.metrics.map((m) => (
                 <tr key={m.key}>
@@ -195,6 +197,7 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
                   <td className="numeric">{formatScore(m.v0, m.key === 'global' ? 2 : 0)}</td>
                   <td className="numeric">{formatScore(m.vf, m.key === 'global' ? 2 : 0)}</td>
                   <td className="numeric">{m.delta === null ? '—' : signed(m.delta)}</td>
+                  <td>{m.change ? CHANGE_LABEL[m.change] : '—'}{m.direction === 'lower_is_better' ? <span className="text-muted"> (menor = mejor)</span> : null}</td>
                 </tr>
               ))}
               {code === 'EQ5D3L' ? (
@@ -203,6 +206,7 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
                   <td>{(v0?.status === 'completed' && (v0.scores as { profile?: string | null }).profile) || '—'}</td>
                   <td>{(vf?.status === 'completed' && (vf.scores as { profile?: string | null }).profile) || '—'}</td>
                   <td>No se resta (perfil categórico)</td>
+                  <td>—</td>
                 </tr>
               ) : null}
             </tbody>
@@ -221,8 +225,8 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
                 {cmp.items.map((item) => (
                   <tr key={item.code}>
                     <th scope="row" style={{ fontWeight: 500 }}>{item.label}</th>
-                    <td>{item.v0Label}{item.v0 !== null && code !== 'EVASAF' ? <span className="text-muted"> ({item.v0})</span> : null}</td>
-                    <td>{item.vfLabel}{item.vf !== null && code !== 'EVASAF' ? <span className="text-muted"> ({item.vf})</span> : null}</td>
+                    <td>{item.v0Label}{item.v0 !== null && code !== 'EVASAF' ? <span className="text-muted"> ({isVeritas ? `${itemPoints(item.code, item.v0)} p.` : item.v0})</span> : null}</td>
+                    <td>{item.vfLabel}{item.vf !== null && code !== 'EVASAF' ? <span className="text-muted"> ({isVeritas ? `${itemPoints(item.code, item.vf)} p.` : item.vf})</span> : null}</td>
                     {showDirection ? <td>{item.change ? CHANGE_LABEL[item.change] : '—'}</td> : null}
                   </tr>
                 ))}
@@ -233,7 +237,7 @@ function InstrumentSection({ code, v0, vf, cmp, visitIds }: {
             <p className="coamo-field-hint">Ítems 12-15 condicionados: se muestran si se cumplió su condición; no entran en la puntuación global.</p>
           ) : null}
           {code === 'VERITAS_PRN' || code === 'VERITAS_PRO' ? (
-            <p className="coamo-field-hint">Códigos de respuesta (1 = Siempre … 5 = Nunca). Sin dirección del cambio: la clave de puntuación no está documentada.</p>
+            <p className="coamo-field-hint">Entre paréntesis, puntos del ítem según la clave (1 = máxima adherencia … 5 = mínima; ítems invertidos ya recodificados). «Más favorable» = menos puntos. Es un cambio individual, no una inferencia estadística.</p>
           ) : null}
         </details>
       ) : null}
