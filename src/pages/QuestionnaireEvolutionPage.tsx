@@ -15,7 +15,11 @@ import { ADMINISTRATION_MODE_LABEL, INSTRUMENTS, INSTRUMENT_CODES, type Instrume
 import { formatScore, isComplete, veritasItemScore } from '../domain/questionnaires/scoring';
 import { DIAGNOSIS_LABEL, formatDate, todayIso } from '../domain/study';
 import { listAdministrationsForVisits } from '../services/questionnaireService';
-import { getPatient, listVisits, type Patient, type Visit } from '../services/patientService';
+import { listEvolutionsForVisits } from '../services/evolutionService';
+import { listStratificationsForVisits, type StratificationRecord } from '../services/stratificationService';
+import { categoricalRow, clinicalRows, numericRow, stratificationRows, type LongitudinalRow } from '../domain/longitudinal';
+import type { ClinicalValues } from '../domain/clinicalSchema';
+import { getClinicalAssessment, getPatient, listVisits, type Patient, type Visit } from '../services/patientService';
 
 export function QuestionnaireEvolutionPage() {
   const { id = '' } = useParams();
@@ -24,18 +28,30 @@ export function QuestionnaireEvolutionPage() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [visits, setVisits] = useState<Partial<Record<StudyVisit, Visit>>>({});
   const [admins, setAdmins] = useState<QuestionnaireAdministration[]>([]);
+  const [clinical, setClinical] = useState<Partial<Record<StudyVisit, ClinicalValues | null>>>({});
+  const [strata, setStrata] = useState<StratificationRecord[]>([]);
+  const [evolutionCount, setEvolutionCount] = useState<number | null>(null);
 
   useEffect(() => {
     void (async () => {
       const [p, v] = await Promise.all([getPatient(id), listVisits(id)]);
       const study = v.data.filter((x) => (x.visit_type === 'baseline' || x.visit_type === 'final') && x.status !== 'cancelled');
-      const a = await listAdministrationsForVisits(study.map((x) => x.id));
       const byMoment: Partial<Record<StudyVisit, Visit>> = {};
       for (const x of study) byMoment[studyVisitOf(x.visit_type)!] = x;
+      const [a, c0, cf, st, ev] = await Promise.all([
+        listAdministrationsForVisits(study.map((x) => x.id)),
+        byMoment.V0 ? getClinicalAssessment(byMoment.V0.id) : Promise.resolve({ data: null, error: null }),
+        byMoment.VF ? getClinicalAssessment(byMoment.VF.id) : Promise.resolve({ data: null, error: null }),
+        listStratificationsForVisits(study.map((x) => x.id)),
+        listEvolutionsForVisits(v.data.filter((x) => x.status !== 'cancelled').map((x) => x.id)),
+      ]);
+      setClinical({ V0: c0.data, VF: cf.data });
+      setStrata(st.data);
+      setEvolutionCount(ev.error ? null : ev.data.length);
       setPatient(p.data);
       setVisits(byMoment);
       setAdmins(a.data);
-      setError(p.error ?? v.error ?? a.error);
+      setError(p.error ?? v.error ?? a.error ?? c0.error ?? cf.error ?? st.error);
       setLoading(false);
     })();
   }, [id]);
@@ -53,6 +69,20 @@ export function QuestionnaireEvolutionPage() {
     (['V0', 'VF'] as const)
       .filter((m) => visits[m] && (m === 'V0' ? cmp.v0Status : cmp.vfStatus) !== 'completed' && (m === 'V0' ? cmp.v0Status : cmp.vfStatus) !== 'not_applicable')
       .map((m) => `${INSTRUMENTS[code].shortName} · ${m}: ${STATUS_LABEL[m === 'V0' ? cmp.v0Status : cmp.vfStatus]}`));
+  const strataAt = (m: StudyVisit) => {
+    const r = visits[m] ? strata.find((x) => x.visit_id === visits[m]!.id && x.status === 'completed') : undefined;
+    return r ? { finalPriority: r.final_priority, score: r.score, modelVersion: r.model_version } : null;
+  };
+  const metricOf = (code: InstrumentCode, key: string) => comparisons.find((c) => c.code === code)!.cmp.metrics.find((m) => m.key === key);
+  const profile = (a: QuestionnaireAdministration | null) => (a?.status === 'completed' ? (a.scores as { profile?: string | null }).profile ?? null : null);
+  const qRows: LongitudinalRow[] = [
+    numericRow('Cuestionarios', 'IEXPAC global (0-10; mayor = mejor experiencia) · variable principal', metricOf('IEXPAC', 'global')?.v0 ?? null, metricOf('IEXPAC', 'global')?.vf ?? null, { decimals: 2, higherIsBetter: true }),
+    numericRow('Cuestionarios', 'EQ-5D-3L EVA (0-100; mayor = mejor salud percibida)', metricOf('EQ5D3L', 'vas')?.v0 ?? null, metricOf('EQ5D3L', 'vas')?.vf ?? null, { higherIsBetter: true }),
+    categoricalRow('Cuestionarios', 'EQ-5D-3L perfil (5 dígitos)', profile(find('V0', 'EQ5D3L')), profile(find('VF', 'EQ5D3L'))),
+    numericRow('Cuestionarios', 'VERITAS-PRN total (24-120; menor = mayor adherencia)', metricOf('VERITAS_PRN', 'total')?.v0 ?? null, metricOf('VERITAS_PRN', 'total')?.vf ?? null, { higherIsBetter: false }),
+    numericRow('Cuestionarios', 'VERITAS-Pro total (24-120; menor = mayor adherencia)', metricOf('VERITAS_PRO', 'total')?.v0 ?? null, metricOf('VERITAS_PRO', 'total')?.vf ?? null, { higherIsBetter: false }),
+  ];
+  const longitudinal: LongitudinalRow[] = [...stratificationRows(strataAt('V0'), strataAt('VF')), ...qRows, ...clinicalRows(clinical.V0 ?? null, clinical.VF ?? null)];
   const iexpac = comparisons[0].cmp.metrics.find((m) => m.key === 'global')!;
   const vas = comparisons[1].cmp.metrics.find((m) => m.key === 'vas')!;
 
@@ -60,7 +90,7 @@ export function QuestionnaireEvolutionPage() {
     <div className="page-stack coamo-report">
       <PageHeader
         eyebrow={`${patient.study_code} · ${DIAGNOSIS_LABEL[patient.diagnosis]}`}
-        title="Evolución de cuestionarios V0–VF"
+        title="Evolución V0–VF"
         description={`V0: ${visits.V0 ? formatDate(visits.V0.visit_date) : 'sin registrar'} · VF: ${visits.VF ? formatDate(visits.VF.visit_date) : 'sin registrar'} · Resumen generado el ${formatDate(todayIso())}. Datos seudonimizados.`}
         actions={
           <>
@@ -87,6 +117,35 @@ export function QuestionnaireEvolutionPage() {
         <p className="coamo-field-hint" style={{ marginTop: 'var(--sp-3)' }}>
           Las diferencias son descriptivas (Δ = VF − V0) y solo se calculan con ambas mediciones completas. No se aplican umbrales de
           mejoría o empeoramiento: no están definidos para la interpretación individual.
+        </p>
+      </section>
+
+      <section className="card coamo-break" aria-labelledby="evo-long">
+        <h2 id="evo-long">Resumen longitudinal integrado</h2>
+        <p className="help-text">
+          Estratificación CMO, cuestionarios y variables clínicas comparables registradas en V0 y VF. Δ = VF − V0 solo con ambas observaciones;
+          «más/menos favorable» solo donde la dirección de la escala está documentada (en las variables clínicas no se rotula). Cambio individual,
+          sin inferencia estadística.
+        </p>
+        <div className="table-wrap">
+          <table>
+            <caption className="visually-hidden">Variable, V0, VF y cambio</caption>
+            <thead><tr><th scope="col">Bloque</th><th scope="col">Variable</th><th scope="col">V0</th><th scope="col">VF</th><th scope="col">Cambio</th></tr></thead>
+            <tbody>
+              {longitudinal.map((r) => (
+                <tr key={`${r.group}-${r.variable}`}>
+                  <td className="cell-muted">{r.group}</td>
+                  <th scope="row" style={{ fontWeight: 500 }}>{r.variable}</th>
+                  <td>{r.v0}</td><td>{r.vf}</td>
+                  <td>{r.change}{r.direction ? <span className="text-muted"> · {CHANGE_LABEL[r.direction]}</span> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="coamo-field-hint">
+          Evoluciones farmacéuticas registradas (todas las visitas): {evolutionCount ?? '—'}. Actuaciones farmacéuticas: pendientes del catálogo aprobado
+          (tablas 5-7 del modelo CMO), sin registro estructurado todavía. Variables clínicas no registradas en ninguna de las dos visitas no se muestran.
         </p>
       </section>
 

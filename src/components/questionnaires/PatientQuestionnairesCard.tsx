@@ -101,7 +101,7 @@ export function PatientQuestionnairesCard({ patientId, visits }: Props) {
         </table>
       </div>
       <div className="form-actions" style={{ marginTop: 'var(--sp-4)' }}>
-        <Link className="button-link button-secondary" to={`/patients/${patientId}/questionnaires`}>Evolución de cuestionarios V0–VF</Link>
+        <Link className="button-link button-secondary" to={`/patients/${patientId}/questionnaires`}>Evolución V0–VF (CMO, cuestionarios y clínica)</Link>
       </div>
     </section>
   );
