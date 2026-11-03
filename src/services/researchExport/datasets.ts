@@ -13,7 +13,7 @@
 
 import { ALL_CLINICAL_FIELDS, type ClinicalField } from '../../domain/clinicalSchema';
 import { INSTRUMENT_CODES, INSTRUMENTS, instrumentItems, type InstrumentCode } from '../../domain/questionnaires/instruments';
-import { DIMENSION_LABEL, STRAT_VARIABLES, STRATIFICATION_MODEL_VERSION } from '../../domain/stratification';
+import { activatesException, DIMENSION_LABEL, STRAT_VARIABLES, STRATIFICATION_MODEL_VERSION } from '../../domain/stratification';
 import {
   DIAGNOSIS_LABEL, MODALITY_LABEL, QUESTIONNAIRE_SUPPORT_LABEL, SEX_LABEL, STATUS_LABEL, STATUS_REASON_LABEL, VISIT_STATUS_LABEL, VISIT_TYPE_LABEL,
 } from '../../domain/study';
@@ -46,7 +46,7 @@ export const TABLE_REQUESTS = {
   questionnaires: {
     table: 'coag_questionnaire_administrations',
     columns:
-      'id,visit_id,instrument_code,instrument_version,status,status_reason_code,administration_mode,data_source,administration_date,responses,item_applicability,scores,scoring_version,revision,last_corrected_at,completed_at,created_at,updated_at',
+      'id,visit_id,instrument_code,instrument_version,status,status_reason_code,administration_mode,data_source,administration_date,responses,item_applicability,comments,scores,scoring_version,revision,last_corrected_at,completed_at,created_at,updated_at',
     orderBy: 'id',
   },
   stratifications: {
@@ -55,8 +55,8 @@ export const TABLE_REQUESTS = {
       'id,visit_id,model_version,status,answers,suggestions,clinical_source_visit_id,raised_priority,result,score,score_min,score_max,model_priority,final_priority,revision,last_corrected_at,completed_at,created_at,updated_at',
     orderBy: 'id',
   },
-  // Evolución farmacéutica: solo metadatos. El texto libre NO se lee para exportar (ver EXCLUDED_COLUMNS).
-  evolutions: { table: 'coag_visit_evolutions', columns: 'visit_id,revision,created_at,updated_at', orderBy: 'visit_id' },
+  // Evolución farmacéutica (texto libre incluido por decisión del investigador, 03/11/2026).
+  evolutions: { table: 'coag_visit_evolutions', columns: 'visit_id,evolution_text,revision,created_at,updated_at', orderBy: 'visit_id' },
   // Vista: fecha esperada y ventana de la visita final (basal + 12 meses ±1 mes, protocolo p. 14).
   schedule: {
     table: 'coag_patient_schedule',
@@ -79,11 +79,6 @@ export const EXCLUDED_COLUMNS: Array<{ table: string; columns: string; reason: s
     table: 'coag_stratifications',
     columns: 'raised_reason, restratification_reason, last_correction_reason, correction_reason',
     reason: 'Texto libre. La elevación de prioridad se exporta en raised_priority (y en la variable derivada prioridad_elevada).',
-  },
-  {
-    table: 'coag_visit_evolutions',
-    columns: 'evolution_text',
-    reason: 'Texto libre asistencial (puede contener datos identificativos): se exporta solo su existencia, revisión y fechas. Incluir el texto requiere decisión del IP y del delegado de protección de datos.',
   },
   { table: 'coag_audit_log, coag_profiles, coag_center_memberships', columns: '(tablas completas)', reason: 'Datos de los profesionales y de auditoría: no son variables del estudio.' },
 ];
@@ -368,6 +363,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         c('administration_date', 'Fecha de administración', 'date', 'coag_questionnaire_administrations.administration_date'),
         c('responses', 'Respuestas originales (JSON)', 'json', 'coag_questionnaire_administrations.responses', { definition: 'Clave = ítem; valor = código de opción. Clave ausente = no respondido. Desglose en analisis/cuestionarios_items.' }),
         c('item_applicability', 'Aplicabilidad de ítems condicionados (JSON)', 'json', 'coag_questionnaire_administrations.item_applicability', { definition: 'Solo IEXPAC q12-q15: true = se cumple la condición; false = no aplica.' }),
+        c('comments', 'Comentarios del paciente (solo EVASAF; texto libre)', 'string', 'coag_questionnaire_administrations.comments', { definition: 'Apartado «Comentarios» del EVASAF (documento de 31/10/2026). Vacío = sin comentarios o no recogido (registros anteriores al 03/11/2026).', notes: 'Texto libre: revisar antes de compartir.' }),
         c('scores', 'Derivados calculados por la BD (JSON)', 'json', 'coag_questionnaire_administrations.scores'),
         c('scoring_version', 'Versión del algoritmo de derivados', 'string', 'coag_questionnaire_administrations.scoring_version'),
         c('revision', 'Número de revisión del registro', 'integer', 'coag_questionnaire_administrations.revision', { definition: '>1 = editado o corregido tras su creación.' }),
@@ -419,9 +415,10 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
       rows: raw.schedule,
     },
     {
-      id: 'evolucion_farmaceutica', folder: 'raw', title: 'Evolución farmacéutica por visita (metadatos; sin texto libre)', grain: 'Una evolución por visita', key: ['visit_id'],
+      id: 'evolucion_farmaceutica', folder: 'raw', title: 'Evolución farmacéutica por visita (texto libre)', grain: 'Una evolución por visita', key: ['visit_id'],
       columns: [
         c('visit_id', 'Identificador de la visita (UUID)', 'string', 'coag_visit_evolutions.visit_id'),
+        c('evolution_text', 'Evolución farmacéutica (texto libre del farmacéutico)', 'string', 'coag_visit_evolutions.evolution_text', { definition: 'Último texto guardado; versiones anteriores en coag_audit_log (no exportado).', notes: 'Texto libre: revisar antes de compartir.' }),
         c('revision', 'Número de revisión', 'integer', 'coag_visit_evolutions.revision', { definition: '>1 = modificada tras su alta (versiones en coag_audit_log).' }),
         createdAt('coag_visit_evolutions'),
         updatedAt('coag_visit_evolutions'),
@@ -445,6 +442,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         c(`${p}_estado${suffix}`, `${name}: estado${visitLabel}`, 'string', 'coag_questionnaire_administrations.status', { instrument: name, visit, values: QSTATUS_VALUES, notes: 'Vacío = sin registro en la visita (pendiente de iniciar).' }),
         c(`${p}_motivo${suffix}`, `${name}: motivo no aplicable / no realizado${visitLabel}`, 'string', 'coag_questionnaire_administrations.status_reason_code', { instrument: name, visit, values: QREASON_VALUES }),
         ...Q_METRICS[code].map((m) => c(`${p}_${m.suffix}${suffix}`, `${m.label}${visitLabel}`, m.type, 'coag_questionnaire_administrations.scores', { instrument: name, visit, rule: `${m.rule} Calculado por la BD (${QUESTIONNAIRE_SCORING_VERSION}).` })),
+        ...(code === 'EVASAF' ? [c(`evasaf_comentarios${suffix}`, `EVASAF: comentarios del paciente${visitLabel}`, 'string', 'coag_questionnaire_administrations.comments', { instrument: name, visit, definition: 'Texto libre. Vacío = sin comentarios o no recogido (anterior al 03/11/2026).' })] : []),
       ];
     });
   const instrumentValues = (visitId: string | null, suffix: string): Row => {
@@ -456,6 +454,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
       out[`${p}_estado${suffix}`] = a?.status ?? null;
       out[`${p}_motivo${suffix}`] = a?.status_reason_code ?? null;
       for (const m of Q_METRICS[code]) out[`${p}_${m.suffix}${suffix}`] = a ? scoreValue(a.scores, m.key, m.type) : null;
+      if (code === 'EVASAF') out[`evasaf_comentarios${suffix}`] = typeof a?.comments === 'string' ? a.comments : null;
     }
     return out;
   };
@@ -502,7 +501,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
     c('is_scheduled', 'Visita programada (frente a no programada)', 'boolean', 'coag_visits.is_scheduled', { values: YES_NO }),
     c('dias_desde_basal', 'Días desde la visita basal', 'integer', 'derivada', { unit: 'días', rule: 'visit_date − fecha de la basal no anulada; vacío si no hay basal.' }),
     c('datos_clinicos_registrados', 'Datos clínicos registrados en la visita', 'boolean', 'derivada', { values: YES_NO, rule: 'Existe registro en coag_clinical_assessments (solo basal y final).' }),
-    c('evolucion_farmaceutica_registrada', 'Evolución farmacéutica registrada en la visita', 'boolean', 'derivada', { values: YES_NO, rule: 'Existe registro en coag_visit_evolutions (el texto no se exporta).' }),
+    c('evolucion_farmaceutica_registrada', 'Evolución farmacéutica registrada en la visita', 'boolean', 'derivada', { values: YES_NO, rule: 'Existe registro en coag_visit_evolutions (texto en raw/evolucion_farmaceutica).' }),
     c('evolucion_farmaceutica_revisiones', 'Número de revisión de la evolución farmacéutica', 'integer', 'coag_visit_evolutions.revision', { definition: '1 = sin modificaciones posteriores; vacío = sin evolución.' }),
     ...strataColumns('', ''),
     ...instrumentColumns('', ''),
@@ -705,7 +704,8 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         variable_modelo: variable?.modelVariable ?? null,
         dimension: variable?.dimension ?? null,
         respuesta: answerText,
-        puntos: variable?.exception ? null : (option?.points ?? null),
+        // Solo se vacía si la respuesta ACTIVA la excepción (edad < 18, terapia avanzada): la edad 18-50 / > 50 sí puntúa.
+        puntos: activatesException(variable, answerText as string | null) ? null : (option?.points ?? null),
         sugerencia: suggested,
         sugerencia_origen: suggestion?.from === undefined || suggestion?.from === null ? null : String(suggestion.from),
         coincide_con_sugerencia: suggested !== null && answerText !== null ? suggested === answerText : null,

@@ -3,7 +3,7 @@
 // Cada texto digital debe aparecer LITERALMENTE en su documento y en el mismo orden.
 
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -150,5 +150,20 @@ describe('catálogo', () => {
   });
   it('solo IEXPAC es variable principal', () => {
     expect(INSTRUMENT_CODES.filter((c) => INSTRUMENTS[c].primaryEndpoint)).toEqual(['IEXPAC']);
+  });
+});
+
+describe('EVASAF actualizado (documento de 31/10/2026, PDF)', () => {
+  // pdftotext parte las líneas: se compara con los espacios normalizados.
+  const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
+  const doc = norm(readFileSync(join(__dirname, 'fixtures', 'source', 'evasaf_2026-10-31.txt'), 'utf8'));
+  it('los 10 ítems implementados coinciden literalmente con el documento actualizado', () => {
+    for (const item of instrumentItems('EVASAF')) expect(doc, item.code).toContain(norm(item.text));
+  });
+  it('la instrucción corregida («una X») y el apartado «Comentarios:» están en el documento y en la app', () => {
+    expect(doc).toContain('Marque con una X la puntuación');
+    expect(doc).toContain('Comentarios:');
+    expect(INSTRUMENTS.EVASAF.commentsField?.label).toBe('Comentarios:');
+    expect(INSTRUMENTS.EVASAF.instructions.default![0]).toContain('Marque con una X');
   });
 });

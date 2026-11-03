@@ -169,3 +169,16 @@ describe('carga útil del registro', () => {
     expect(p.restratification_reason).toBe('Cambio de tratamiento');
   });
 });
+
+describe('excepciones del modelo: solo anulan los puntos cuando se activan', () => {
+  it('edad 18-50 y > 50 puntúan; < 18 activa el modelo pediátrico; terapia avanzada «sí» activa la excepción', async () => {
+    const { activatesException, STRAT_VARIABLES } = await import('../src/domain/stratification');
+    const age = STRAT_VARIABLES.find((v) => v.id === 'age');
+    const adv = STRAT_VARIABLES.find((v) => v.id === 'advanced_therapy');
+    expect(activatesException(age, 'gt50')).toBe(false);
+    expect(activatesException(age, '18_50')).toBe(false);
+    expect(activatesException(age, 'lt18')).toBe(true);
+    expect(activatesException(adv, 'yes')).toBe(true);
+    expect(activatesException(adv, 'no')).toBe(false);
+  });
+});

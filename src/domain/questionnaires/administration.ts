@@ -25,6 +25,8 @@ export type QuestionnaireAdministration = {
   administration_date: string | null;
   responses: Responses;
   item_applicability: Applicability;
+  /** Solo EVASAF: apartado «Comentarios» (texto libre). NULL = sin comentarios o no recogido (anterior al 03/11/2026). */
+  comments: string | null;
   scores: InstrumentScores;
   scoring_version: string | null;
   revision: number;
@@ -129,6 +131,8 @@ export type DraftState = {
   date: string;
   responses: Responses;
   applicability: Applicability;
+  /** Solo EVASAF. */
+  comments: string;
 };
 
 export function validateDraft(code: InstrumentCode, draft: DraftState, today: string): string[] {
@@ -147,11 +151,13 @@ export function validateDraft(code: InstrumentCode, draft: DraftState, today: st
       errors.push(`El ítem ${item.slice(1)} solo se responde si se cumple su condición.`);
     }
   }
+  if ((draft.comments ?? '').trim().length > 0 && code !== 'EVASAF') errors.push('Solo EVASAF tiene apartado de comentarios.');
+  if ((draft.comments ?? '').trim().length > COMMENTS_MAX_LENGTH) errors.push(`Comentarios: máximo ${COMMENTS_MAX_LENGTH} caracteres.`);
   if (draft.status === 'not_applicable' || draft.status === 'not_done') {
     if (!draft.reasonCode) errors.push('Indique el motivo.');
     if (draft.reasonCode === 'other' && draft.reasonDetail.trim().length < 3) errors.push('Describa el motivo «otro».');
-    if (Object.keys(draft.responses).length > 0 || Object.keys(draft.applicability).length > 0) {
-      errors.push('Hay respuestas registradas: bórrelas antes de marcarlo como no aplicable o no realizado.');
+    if (Object.keys(draft.responses).length > 0 || Object.keys(draft.applicability).length > 0 || (draft.comments ?? '').trim()) {
+      errors.push('Hay respuestas o comentarios registrados: bórrelos antes de marcarlo como no aplicable o no realizado.');
     }
   }
   if (draft.status === 'completed') {
@@ -174,5 +180,9 @@ export function buildAdministrationPayload(draft: DraftState) {
     administration_date: draft.date || null,
     responses: draft.responses,
     item_applicability: draft.applicability,
+    comments: resolvedWithoutAnswers ? null : (draft.comments ?? '').trim() || null,
   };
 }
+
+/** Máximo de la columna comments (espejo de coag_private.enforce_questionnaire_administration). */
+export const COMMENTS_MAX_LENGTH = 2000;

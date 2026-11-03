@@ -15,8 +15,8 @@ describe('biblioteca de documentación y cuestionarios', () => {
   it('EQ-5D-3L (licencia EuroQol) no ofrece versión imprimible propia', () => {
     expect(INSTRUMENT_LIBRARY.find((e) => e.code === 'EQ5D3L')!.printable).toBe(false);
   });
-  it('VERITAS figura como pendiente de valoración por el CEIm (no está en el protocolo aprobado)', () => {
-    for (const code of ['VERITAS_PRN', 'VERITAS_PRO']) expect(INSTRUMENT_LIBRARY.find((e) => e.code === code)!.status).toBe('in_use_pending_ceim');
+  it('VERITAS figura como decisión de los investigadores (sustituye a Morisky-Green del protocolo aprobado)', () => {
+    for (const code of ['VERITAS_PRN', 'VERITAS_PRO']) expect(INSTRUMENT_LIBRARY.find((e) => e.code === code)!.status).toBe('investigators_decision');
   });
   it('las referencias bibliográficas proceden de los documentos aportados (PMID presente en la fuente)', () => {
     const sources: Record<string, string> = { EVASAF: 'evasaf.txt', VERITAS_PRN: 'veritas_prn_scoring.txt', VERITAS_PRO: 'veritas_pro_scoring.txt' };

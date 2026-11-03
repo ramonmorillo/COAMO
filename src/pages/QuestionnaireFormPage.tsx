@@ -6,7 +6,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { Notice } from '../components/ui/Notice';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import {
+import { COMMENTS_MAX_LENGTH,
   applicabilityHints, DATA_SOURCE_LABEL, effectiveStatus, REASON_LABEL, REASONS_FOR_STATUS, STATUS_LABEL, STATUS_TONE,
   studyVisitOf, validateDraft, VISIT_LABEL,
   type DataSource, type DraftState, type QuestionnaireAdministration, type ReasonCode,
@@ -35,6 +35,7 @@ function draftFrom(admin: QuestionnaireAdministration | null, visit: Visit): Dra
     date: admin?.administration_date ?? (visit.visit_date <= todayIso() ? visit.visit_date : ''),
     responses: { ...(admin?.responses ?? {}) },
     applicability: { ...(admin?.item_applicability ?? {}) },
+    comments: admin?.comments ?? '',
   };
 }
 
@@ -189,10 +190,10 @@ function QuestionnaireForm({ visitId, instrument }: { visitId: string; instrumen
     void save({ ...draft, status: 'completed' });
   };
   const resolveWithoutAnswers = () => {
-    if (Object.keys(draft.responses).length > 0 || Object.keys(draft.applicability).length > 0) {
-      if (!window.confirm('Se borrarán las respuestas registradas en pantalla para marcarlo como no aplicable o no realizado. ¿Continuar?')) return;
+    if (Object.keys(draft.responses).length > 0 || Object.keys(draft.applicability).length > 0 || draft.comments.trim()) {
+      if (!window.confirm('Se borrarán las respuestas (y comentarios) registradas en pantalla para marcarlo como no aplicable o no realizado. ¿Continuar?')) return;
     }
-    void save({ ...draft, responses: {}, applicability: {} });
+    void save({ ...draft, responses: {}, applicability: {}, comments: '' });
   };
 
   const iexpac = code === 'IEXPAC' ? (scores as IexpacScores) : null;
@@ -288,6 +289,14 @@ function QuestionnaireForm({ visitId, instrument }: { visitId: string; instrumen
                   )}
                 </div>
               ))}
+              {def.commentsField ? (
+                <div className="field" style={{ marginTop: 'var(--sp-4)' }}>
+                  <label htmlFor="q-comments" className="text-strong">{def.commentsField.label}</label>
+                  <textarea id="q-comments" rows={4} value={draft.comments} disabled={!editableAnswers} maxLength={COMMENTS_MAX_LENGTH + 200}
+                    onChange={(e) => update({ comments: e.target.value })} style={{ width: '100%' }} />
+                  <p className="coamo-field-hint">{def.commentsField.hint} {draft.comments.trim().length}/{COMMENTS_MAX_LENGTH}</p>
+                </div>
+              ) : null}
               {def.footer?.[mode ?? 'default'] ? <p className="coamo-field-hint" style={{ marginTop: 'var(--sp-4)' }}>{def.footer[mode ?? 'default']}</p> : null}
             </>
           ) : null}

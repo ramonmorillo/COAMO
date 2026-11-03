@@ -52,6 +52,11 @@ const yesNo = (points: number): StratOption[] => [
   { value: 'no', label: 'No', points: 0 },
 ];
 
+/** ¿Esta respuesta activa una excepción del modelo (M pp. 17-18)? Entonces la pregunta no puntúa. */
+export function activatesException(variable: Pick<StratVariable, 'exception'> | undefined, value: string | null | undefined): boolean {
+  return (variable?.exception === 'pediatric' && value === 'lt18') || (variable?.exception === 'advanced_therapy' && value === 'yes');
+}
+
 export const STRAT_VARIABLES: StratVariable[] = [
   // ── Tabla 1 · Demográfica (máx. 3) ──
   { id: 'age', dimension: 'demographic', modelVariable: 'Edad', source: 'M Tabla 1, p. 12', exception: 'pediatric',
@@ -254,7 +259,7 @@ export function contextNotes(clinical: ClinicalSnapshot | null, eq5d: Eq5dContex
   const pct = collected === null || expected === null || expected === 0 ? null : Math.round((collected / expected) * 1000) / 10;
   const eqDate = eq5d?.date ? eq5d.date.slice(0, 10).split('-').reverse().join('/') : null;
   return {
-    non_adherence: `Dispensaciones recogidas/previstas (últimos 12 meses): ${pct === null ? 'no calculable' : `${String(pct).replace('.', ',')} % (${collected}/${expected})`}. Morisky-Green no se recoge en COAMO (la adherencia se mide con VERITAS-PRN/VERITAS-Pro en V0/VF; ver su total en la evolución de cuestionarios).`,
+    non_adherence: `Dispensaciones recogidas/previstas (últimos 12 meses): ${pct === null ? 'no calculable' : `${String(pct).replace('.', ',')} % (${collected}/${expected})`}. Morisky-Green no se recoge en COAMO: sustituido por VERITAS-PRN/VERITAS-Pro (decisión de los investigadores, 03/11/2026); ver su total en la evolución V0–VF.`,
     low_qol: eq5d
       ? `EQ-5D-3L${eqDate ? ` del ${eqDate}` : ''}: perfil ${eq5d.profile ?? 'incompleto'}, EVA ${eq5d.vas ?? '—'}.`
       : 'Sin EQ-5D-3L completado hasta esta visita.',

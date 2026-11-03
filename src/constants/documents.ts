@@ -9,11 +9,11 @@
 
 import type { InstrumentCode } from '../domain/questionnaires/instruments';
 
-export type ApprovalStatus = 'ceim_approved' | 'in_use_pending_ceim' | 'not_provided' | 'published';
+export type ApprovalStatus = 'ceim_approved' | 'investigators_decision' | 'not_provided' | 'published';
 
 export const APPROVAL_STATUS_LABEL: Record<ApprovalStatus, string> = {
   ceim_approved: 'Aprobado por el CEIm (vigente)',
-  in_use_pending_ceim: 'En uso; no figura en el protocolo aprobado: valorar comunicación al CEIm',
+  investigators_decision: 'En uso por decisión de los investigadores (03/11/2026): sustituye a Morisky-Green del protocolo aprobado',
   not_provided: 'No aportado a la herramienta',
   published: 'Publicación (referencia)',
 };
@@ -48,9 +48,9 @@ export const INSTRUMENT_LIBRARY: InstrumentLibraryEntry[] = [
   { code: 'EQ5D3L', moments: 'V0 y VF', status: 'ceim_approved',
     restrictions: '© EuroQol Research Foundation. Requiere registro/licencia EuroQol y usar las versiones oficiales (en papel y electrónica): no se genera versión imprimible propia.', printable: false },
   { code: 'EVASAF', moments: 'V0 y VF', status: 'ceim_approved',
-    restrictions: 'Encuesta publicada (Farm Hosp 2015). Sin restricciones indicadas en el documento aportado.', printable: true },
-  { code: 'VERITAS_PRN', moments: 'V0 y VF, en pacientes con tratamiento a demanda (orientativo; no se impone)', status: 'in_use_pending_ceim',
+    restrictions: 'Encuesta publicada (Farm Hosp 2015). Sin restricciones indicadas en el documento aportado. Versión vigente: documento de 31/10/2026 (con «Comentarios»).', printable: true },
+  { code: 'VERITAS_PRN', moments: 'V0 y VF, en pacientes con tratamiento a demanda (orientativo; no se impone)', status: 'investigators_decision',
     restrictions: 'Permiso de los autores y validación de la versión española no acreditados en la documentación aportada.', printable: true },
-  { code: 'VERITAS_PRO', moments: 'V0 y VF, en pacientes con profilaxis (orientativo; no se impone)', status: 'in_use_pending_ceim',
+  { code: 'VERITAS_PRO', moments: 'V0 y VF, en pacientes con profilaxis (orientativo; no se impone)', status: 'investigators_decision',
     restrictions: 'Permiso de los autores y validación de la versión española no acreditados en la documentación aportada.', printable: true },
 ];
