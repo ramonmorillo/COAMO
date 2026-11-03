@@ -30,6 +30,12 @@ const db = {
     raised_priority: null, raised_reason: null, restratification_reason: null, score: 22, score_min: 22, score_max: 22, model_priority: 2, final_priority: 2, revision: 1,
     last_correction_reason: null, last_corrected_at: null, completed_at: '2026-01-15', updated_at: '' }],
   coag_visit_evolutions: [],
+  coag_intervention_catalog: [
+    { code: 'SFT-01', catalog_version: 'v', domain: 'pharmacotherapeutic_followup', applies_to_priorities: [1, 2, 3], source_table: 'Tabla 5', sort_order: 1, action_text: 'Evaluar y validar regularmente los tratamientos para asegurar su adecuación, seguridad y efectividad, considerando las características únicas de las coagulopatías congénitas y las comorbilidades del paciente.', is_active: true },
+    { code: 'EDU-08', catalog_version: 'v', domain: 'patient_education', applies_to_priorities: [1, 2], source_table: 'Tabla 6', sort_order: 8, action_text: 'Proporcionar formación y educación específica para familiares y cuidadores, facilitando su participación en el cuidado del paciente y la comunicación de cualquier nuevo evento clínico', is_active: true },
+    { code: 'COO-01', catalog_version: 'v', domain: 'care_coordination', applies_to_priorities: [1, 2, 3], source_table: 'Tabla 5', sort_order: 1, action_text: 'Participación de los especialistas en FH en programas docentes multidisciplinares, que integren a todos los centros asistenciales nacionales, para garantizar un conocimiento actualizado y homogéneo en el abordaje de las coagulopatías congénitas.', is_active: true },
+  ],
+  coag_interventions: [],
   coag_audit_log: [],
 };
 let failNextEvolutionWrite = false;
@@ -85,6 +91,21 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   await page.addInitScript(([jwt, uid]) => { if (!localStorage.getItem('coamo-auth')) localStorage.setItem('coamo-auth', JSON.stringify({ access_token: jwt, refresh_token: 'r', token_type: 'bearer', expires_in: 3600, expires_at: 4102444800, user: { id: uid, aud: 'authenticated', role: 'authenticated', email: 'i@test' } })); }, [jwt, UID]);
   const base = 'http://127.0.0.1:4181/COAMO/#';
 
+  // ── Actuaciones farmacéuticas ──
+  await page.goto(`${base}/patients/p1`);
+  await page.getByRole('link', { name: 'Actuaciones AF' }).first().click();
+  await page.getByRole('heading', { name: 'Actuaciones farmacéuticas', level: 1 }).waitFor({ timeout: 15000 });
+  ok(await page.getByText(/Prioridad vigente: Prioridad 2/).isVisible(), 'actuaciones: prioridad vigente de la estratificación completada');
+  ok(await page.locator('li[data-code]').count() === 3 && await page.getByText('Sin registrar').count() === 3, 'recomendadas para P2 (Tablas 5 y 6) y ninguna dada por realizada');
+  ok(db.coag_interventions.length === 0, 'recomendada ≠ realizada: mostrarlas no crea registros');
+  ok(!(await page.getByText(/Catálogo de Prioridad 1 incompleto/).isVisible()), 'sin aviso de catálogo P1 incompleto en un paciente P2');
+  await page.locator('li[data-code="SFT-01"]').getByRole('button', { name: 'Registrar como realizada' }).click();
+  await page.getByText('Actuación registrada como realizada.').waitFor();
+  ok(db.coag_interventions.length === 1 && db.coag_interventions[0].status === 'performed' && db.coag_interventions[0].performed_date === '2026-01-15', 'registro real: realizada con la fecha de la visita');
+  await page.locator('li[data-code="EDU-08"]').getByRole('button', { name: 'Prever' }).click();
+  await page.getByText('Actuación registrada como prevista.').waitFor();
+  ok(db.coag_interventions[1].status === 'planned' && db.coag_interventions[1].performed_date === null, 'prevista sin fecha de realización');
+
   // ── Evolución farmacéutica ──
   await page.goto(`${base}/patients/p1`);
   await page.getByRole('link', { name: 'Evolución farmacéutica' }).first().click();
@@ -106,6 +127,7 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   ok(clip.includes('EVOLUCIÓN FARMACÉUTICA') && clip.includes('Fecha: 15/01/2026 · Visita basal · Presencial') && clip.includes('prioridad 2 (puntuación 22'), 'texto copiado: encabezado, fecha, visita y estratificación');
   ok(!clip.includes('COAMO-1-0001'), 'texto copiado sin el código de estudio');
+  ok(clip.includes('Actuaciones farmacéuticas realizadas:\n- Seguimiento farmacoterapéutico: Evaluar y validar') && !clip.includes('familiares y cuidadores'), 'texto copiado: solo la actuación realizada (no la prevista)');
   // Concurrencia: otra persona guarda antes (revisión 2 en la BD) → no se sobrescribe.
   db.coag_visit_evolutions[0].revision = 2; db.coag_visit_evolutions[0].evolution_text = 'Cambio de otra persona';
   await area.fill('Mi cambio tardío');

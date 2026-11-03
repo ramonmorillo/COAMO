@@ -209,7 +209,18 @@ export function syntheticData(options: { patients: number; seed?: number; follow
   // Evoluciones farmacéuticas (solo metadatos) en las visitas realizadas impares.
   const evolutions = visits.filter((v, i) => v.status === 'completed' && i % 2 === 1)
     .map((v) => ({ visit_id: v.id, evolution_text: `Evolución sintética de ${v.id}.\nSegunda línea; con "comillas".`, revision: 1, created_at: '2026-10-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' }));
-  return { centers, patients, inclusions, visits, clinical, questionnaires, stratifications, schedule, evolutions };
+  const intervention_catalog = [
+    { code: 'SFT-01', catalog_version: 'v', domain: 'pharmacotherapeutic_followup', applies_to_priorities: [1, 2, 3], source_table: 'Tabla 5', sort_order: 1, action_text: 'Evaluar y validar regularmente los tratamientos…', is_active: true },
+    { code: 'EDU-08', catalog_version: 'v', domain: 'patient_education', applies_to_priorities: [1, 2], source_table: 'Tabla 6', sort_order: 8, action_text: 'Proporcionar formación…', is_active: true },
+  ];
+  const interventions = visits.filter((v) => v.status === 'completed').flatMap((v, i) => [
+    { id: uuid(7, i * 2 + 1), visit_id: v.id, catalog_code: 'SFT-01', custom_text: null, domain: 'pharmacotherapeutic_followup', status: i % 3 === 0 ? 'planned' : 'performed',
+      performed_date: i % 3 === 0 ? null : v.visit_date, followup_note: i % 4 === 0 ? 'Nota sintética; "comillas"\nsegunda línea' : null, priority_context: 2, recommended_for_priority: true, revision: 1,
+      created_at: '2026-10-01T10:00:00Z', updated_at: '2026-10-01T10:00:00Z' },
+    ...(i % 5 === 0 ? [{ id: uuid(7, i * 2 + 2), visit_id: v.id, catalog_code: null, custom_text: 'Actuación adicional sintética', domain: 'care_coordination', status: 'discarded',
+      performed_date: null, followup_note: null, priority_context: null, recommended_for_priority: null, revision: 2, created_at: '2026-10-01T10:00:00Z', updated_at: '2026-10-02T10:00:00Z' }] : []),
+  ]);
+  return { centers, patients, inclusions, visits, clinical, questionnaires, stratifications, schedule, evolutions, intervention_catalog, interventions };
 }
 
 export type MemorySourceOptions = {

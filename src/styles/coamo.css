@@ -296,3 +296,9 @@ button.button-link-inline { display: inline; min-height: 0; padding: 0; border: 
   .coamo-priority-list div { grid-template-columns: 1fr; gap: var(--sp-1); }
   .coamo-priority-list dd:last-child { text-align: left; }
 }
+
+/* Actuaciones farmacéuticas */
+.coamo-int-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-3); }
+.coamo-int-item { border-top: 1px solid var(--color-border, #ddd); padding-top: var(--sp-2); }
+.coamo-int-item p { margin: 0 0 var(--sp-2); }
+.coamo-int-record { display: grid; gap: var(--sp-1); }

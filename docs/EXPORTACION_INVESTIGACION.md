@@ -19,9 +19,11 @@ Ausente = celda vacía (nunca 0 ni −999). Las puntuaciones son las guardadas p
 ## 2. Contenido del ZIP
 
 - `raw/`: `centros`, `pacientes`, `inclusion`, `visitas`, `datos_clinicos`, `cuestionarios_registros`, `estratificaciones`,
-  `calendario_final` (vista `coag_patient_schedule`), `evolucion_farmaceutica` (texto, revisión y fechas).
+  `calendario_final` (vista `coag_patient_schedule`), `evolucion_farmaceutica` (texto, revisión y fechas), `catalogo_actuaciones` (Tablas 5-6 del modelo CMO) y `actuaciones`
+  (registros de AF: estado, fecha, ámbito, prioridad vigente, «recomendada», seguimiento).
 - `analisis/long_visitas`: una fila por visita o contacto (estado, modalidad, días desde la basal, estratificación y
-  estado/derivados de cada instrumento; `evolucion_farmaceutica_registrada` y `_revisiones`).
+  estado/derivados de cada instrumento; `evolucion_farmaceutica_registrada` y `_revisiones`; `actuaciones_realizadas` y
+  `actuaciones_previstas`, que no cuentan las recomendadas ni las anuladas).
 - `analisis/wide_pacientes`: una fila por paciente; sufijos `_v0` (basal) y `_vf` (final): datos clínicos del protocolo
   (pp. 10-12), estratificación, cuestionarios e ítems IEXPAC; cambios `iexpac_global_cambio_vf_v0` (variable principal),
   `eq5d_eva_cambio_vf_v0`, `cmo_puntuacion_cambio_vf_v0`, `vprn_total_cambio_vf_v0` y `vpro_total_cambio_vf_v0`

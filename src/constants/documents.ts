@@ -50,7 +50,7 @@ export const INSTRUMENT_LIBRARY: InstrumentLibraryEntry[] = [
   { code: 'EVASAF', moments: 'V0 y VF', status: 'ceim_approved',
     restrictions: 'Encuesta publicada (Farm Hosp 2015). Sin restricciones indicadas en el documento aportado. Versión vigente: documento de 31/10/2026 (con «Comentarios»).', printable: true },
   { code: 'VERITAS_PRN', moments: 'V0 y VF, en pacientes con tratamiento a demanda (orientativo; no se impone)', status: 'investigators_decision',
-    restrictions: 'Permiso de los autores y validación de la versión española no acreditados en la documentación aportada.', printable: true },
+    restrictions: 'Permiso de uso para el estudio confirmado por los investigadores (03/11/2026). Validación de la versión española no acreditada en la documentación aportada.', printable: true },
   { code: 'VERITAS_PRO', moments: 'V0 y VF, en pacientes con profilaxis (orientativo; no se impone)', status: 'investigators_decision',
-    restrictions: 'Permiso de los autores y validación de la versión española no acreditados en la documentación aportada.', printable: true },
+    restrictions: 'Permiso de uso para el estudio confirmado por los investigadores (03/11/2026). Validación de la versión española no acreditada en la documentación aportada.', printable: true },
 ];

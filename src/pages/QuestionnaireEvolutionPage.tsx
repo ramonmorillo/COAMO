@@ -16,6 +16,8 @@ import { formatScore, isComplete, veritasItemScore } from '../domain/questionnai
 import { DIAGNOSIS_LABEL, formatDate, todayIso } from '../domain/study';
 import { listAdministrationsForVisits } from '../services/questionnaireService';
 import { listEvolutionsForVisits } from '../services/evolutionService';
+import { listInterventionsForVisits } from '../services/interventionService';
+import { DOMAIN_LABEL, DOMAIN_ORDER, performedInterventions, type InterventionRecord } from '../domain/interventions';
 import { listStratificationsForVisits, type StratificationRecord } from '../services/stratificationService';
 import { categoricalRow, clinicalRows, numericRow, stratificationRows, type LongitudinalRow } from '../domain/longitudinal';
 import type { ClinicalValues } from '../domain/clinicalSchema';
@@ -31,6 +33,7 @@ export function QuestionnaireEvolutionPage() {
   const [clinical, setClinical] = useState<Partial<Record<StudyVisit, ClinicalValues | null>>>({});
   const [strata, setStrata] = useState<StratificationRecord[]>([]);
   const [evolutionCount, setEvolutionCount] = useState<number | null>(null);
+  const [interventions, setInterventions] = useState<InterventionRecord[] | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -38,16 +41,18 @@ export function QuestionnaireEvolutionPage() {
       const study = v.data.filter((x) => (x.visit_type === 'baseline' || x.visit_type === 'final') && x.status !== 'cancelled');
       const byMoment: Partial<Record<StudyVisit, Visit>> = {};
       for (const x of study) byMoment[studyVisitOf(x.visit_type)!] = x;
-      const [a, c0, cf, st, ev] = await Promise.all([
+      const [a, c0, cf, st, ev, iv] = await Promise.all([
         listAdministrationsForVisits(study.map((x) => x.id)),
         byMoment.V0 ? getClinicalAssessment(byMoment.V0.id) : Promise.resolve({ data: null, error: null }),
         byMoment.VF ? getClinicalAssessment(byMoment.VF.id) : Promise.resolve({ data: null, error: null }),
         listStratificationsForVisits(study.map((x) => x.id)),
         listEvolutionsForVisits(v.data.filter((x) => x.status !== 'cancelled').map((x) => x.id)),
+        listInterventionsForVisits(v.data.filter((x) => x.status !== 'cancelled').map((x) => x.id)),
       ]);
       setClinical({ V0: c0.data, VF: cf.data });
       setStrata(st.data);
       setEvolutionCount(ev.error ? null : ev.data.length);
+      setInterventions(iv.error ? null : iv.data);
       setPatient(p.data);
       setVisits(byMoment);
       setAdmins(a.data);
@@ -144,8 +149,10 @@ export function QuestionnaireEvolutionPage() {
           </table>
         </div>
         <p className="coamo-field-hint">
-          Evoluciones farmacéuticas registradas (todas las visitas): {evolutionCount ?? '—'}. Actuaciones farmacéuticas: pendientes del catálogo aprobado
-          (tablas 5-7 del documento del modelo CMO SEFH v2.0), sin registro estructurado todavía. Variables clínicas no registradas en ninguna de las dos visitas no se muestran.
+          Evoluciones farmacéuticas registradas (todas las visitas): {evolutionCount ?? '—'}. Actuaciones farmacéuticas realizadas durante el seguimiento
+          (todas las visitas): {interventions === null ? '—' : `${performedInterventions(interventions).length}`}
+          {interventions ? ` (${DOMAIN_ORDER.map((d) => `${DOMAIN_LABEL[d]}: ${performedInterventions(interventions).filter((r) => r.domain === d).length}`).join(' · ')})` : ''}.
+          Variables clínicas no registradas en ninguna de las dos visitas no se muestran.
         </p>
       </section>
 

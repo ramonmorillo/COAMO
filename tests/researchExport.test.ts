@@ -238,6 +238,17 @@ describe('Paquete de exportación COAMO (datos sintéticos)', () => {
     expect(long.slice(1).filter((r) => r[col] === '1' || r[col] === 'true').length).toBe(data.evolutions.length);
   });
 
+  it('actuaciones: catálogo y registros íntegros; LONG solo cuenta las realizadas (no previstas ni anuladas)', async () => {
+    const { text } = await exportAll(data);
+    const raw = parseCsv(text('raw/actuaciones.csv'), ',');
+    expect(raw.length - 1).toBe(data.interventions.length);
+    expect(parseCsv(text('raw/catalogo_actuaciones.csv'), ',').length - 1).toBe(data.intervention_catalog.length);
+    const long = parseCsv(text('analisis/long_visitas.csv'), ',');
+    const ci = long[0].indexOf('actuaciones_realizadas');
+    const total = long.slice(1).reduce((s, r) => s + Number(r[ci] || 0), 0);
+    expect(total).toBe(data.interventions.filter((r) => r.status === 'performed').length);
+  });
+
   it('EVASAF: comentarios íntegros en raw y en WIDE (V0/VF); vacío si no hay', async () => {
     const { text } = await exportAll(data);
     const raw = parseCsv(text('raw/cuestionarios_registros.csv'), ',');

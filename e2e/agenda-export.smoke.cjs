@@ -34,6 +34,7 @@ const db = {
   coag_clinical_assessments: [],
   coag_questionnaire_administrations: [],
   coag_visit_evolutions: [{ visit_id: 'v0', evolution_text: 'Texto sintético', revision: 1, created_at: '2026-01-15T00:00:00Z', updated_at: '2026-01-15T00:00:00Z' }],
+  coag_intervention_catalog: [], coag_interventions: [],
   coag_stratifications: [{ id: 's1', visit_id: 'v0', model_version: 'CMO-COAG-SEFH-v2.0', status: 'completed', answers: { age: '18_50' }, suggestions: {}, clinical_source_visit_id: 'v0', raised_priority: null, result: {}, score: 21, score_min: 21, score_max: 21, model_priority: 2, final_priority: 2, revision: 1, last_corrected_at: null, completed_at: '2026-01-15T00:00:00Z', created_at: '2026-01-15T00:00:00Z', updated_at: '2026-01-15T00:00:00Z' }],
 };
 const writes = [];
@@ -152,7 +153,7 @@ const SHOTS = process.env.SHOTS || '/tmp';
   const zip = fs.readFileSync(await dl.path());
   ok(zip.includes(Buffer.from('manifest.json')) && zip.includes(Buffer.from('analisis/wide_pacientes.csv')) && zip.includes(Buffer.from('coamo_export.xlsx')), 'exportación: el ZIP contiene manifiesto, WIDE y Excel');
   await page.getByText(/Exportación completada y verificada/).waitFor();
-  ok(await page.getByText(/2 pacientes, \d+ visitas, 9 tablas conciliadas/).isVisible(), 'exportación: resumen con 9 tablas conciliadas (incluye evolución farmacéutica)');
+  ok(await page.getByText(/2 pacientes, \d+ visitas, 11 tablas conciliadas/).isVisible(), 'exportación: resumen con 11 tablas conciliadas (evolución, catálogo y actuaciones)');
   await page.screenshot({ path: `${SHOTS}/export.png`, fullPage: true });
   ok(await noHScroll(), 'exportación sin scroll horizontal');
 
