@@ -4,7 +4,7 @@ Herramienta digital del estudio COAMO (atención farmacéutica según el modelo 
 
 **Aprobación ética:** informe favorable del CEIm del Hospital Universitario y Politécnico La Fe, nº de registro **2026-0810-1** (sesión de 21/10/2026). Promotor e IP: Tomás Palanques Pastor (Servicio de Farmacia, H. U. i P. La Fe). Documentos aprobados: protocolo de 30/08/2026 y HIP/CI adultos versión 2 de 25/09/2026. Se muestra en «Proyecto» (`#/project`), en el pie de la app y en el manifiesto de cada exportación.
 
-**Estado (2026-10-28):** acceso seguro y autorización COAMO, centros, pacientes seudonimizados, inclusión, visitas y datos clínicos; **cuestionarios V0/VF** (IEXPAC, EQ-5D-3L, EVASAF, VERITAS-PRN y VERITAS-Pro con puntuación; ver `docs/CUESTIONARIOS.md` §9) — [`docs/CUESTIONARIOS.md`](docs/CUESTIONARIOS.md), [`docs/CUESTIONARIOS_TRAZABILIDAD.md`](docs/CUESTIONARIOS_TRAZABILIDAD.md); **estratificación CMO** (modelo SEFH v2.0) por visita — [`docs/ESTRATIFICACION_CMO.md`](docs/ESTRATIFICACION_CMO.md). Migraciones de cuestionarios, estratificación, puntuación VERITAS y evolución farmacéutica **aplicadas** en Supabase.
+**Estado (2026-10-28):** acceso seguro y autorización COAMO, centros, pacientes seudonimizados, inclusión, visitas y datos clínicos; **cuestionarios V0/VF** (IEXPAC, EQ-5D-3L, EVASAF, VERITAS-PRN y VERITAS-Pro con puntuación; ver `docs/CUESTIONARIOS.md` §9) — [`docs/CUESTIONARIOS.md`](docs/CUESTIONARIOS.md), [`docs/CUESTIONARIOS_TRAZABILIDAD.md`](docs/CUESTIONARIOS_TRAZABILIDAD.md); **estratificación CMO** (modelo SEFH v2.0) por visita — [`docs/ESTRATIFICACION_CMO.md`](docs/ESTRATIFICACION_CMO.md). Migraciones de cuestionarios, estratificación, puntuación VERITAS, evolución farmacéutica, comentarios EVASAF y actuaciones AF (Tablas 5-7) **aplicadas** en Supabase.
 
 Incorporado de DERMAPEX (28/10/2026):
 
@@ -12,7 +12,7 @@ Incorporado de DERMAPEX (28/10/2026):
 - **Exportación de investigación** (`#/export`): ZIP completo, conciliado con la BD y verificado (raw, LONG, WIDE V0/VF, ítems, respuestas de la estratificación, incidencias, diccionario, `.sps`, Excel, JSON, manifiesto). [`docs/EXPORTACION_INVESTIGACION.md`](docs/EXPORTACION_INVESTIGACION.md).
 - **Copias de seguridad**: las del proyecto compartido (scripts en `ramonmorillo/dermapex`), verificadas para las tablas COAMO. [`docs/COPIAS_SEGURIDAD.md`](docs/COPIAS_SEGURIDAD.md).
 
-Incorporado el 03/11/2026 (migraciones `coag_veritas_scoring` y `coag_visit_evolutions` aplicadas y verificadas en Supabase el mismo día; ver [`docs/AUDITORIA_MEJORAS_2026-11.md`](docs/AUDITORIA_MEJORAS_2026-11.md)):
+Incorporado el 03/11/2026 (migraciones `coag_veritas_scoring`, `coag_visit_evolutions`, `coag_evasaf_comments`, `coag_interventions` y `coag_interventions_table7` aplicadas y verificadas en Supabase el mismo día; ver [`docs/AUDITORIA_MEJORAS_2026-11.md`](docs/AUDITORIA_MEJORAS_2026-11.md)):
 
 - **Puntuación VERITAS-PRN y VERITAS-Pro** (clave de los documentos del IP; total 24-120, menor = mayor adherencia) y desbloqueo de VERITAS-Pro.
 - **Evolución farmacéutica por visita** (`#/visits/:visitId/evolution`) con versiones y botón «Copiar evolución para historia clínica».
