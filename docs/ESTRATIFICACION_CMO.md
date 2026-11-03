@@ -48,7 +48,11 @@ Verificación: el caso clínico 1 de M (pp. 63-65) da 2 + 18 + 9 + 2 = 31 → Pr
 ## 3. Incoherencias o vacíos de M (para comunicar a los autores del modelo; para COAMO, resueltos como se indica)
 
 1. **Gravedad según tipo de hemorragia**: ingreso hospitalario = 2 puntos y manejo ambulatorio/domiciliario = 3. Es contraintuitivo
-   (más puntos al caso menos grave). Se implementa literal por decisión del IP (spec §5.2), con aviso en pantalla. El caso clínico 1 puntúa «manejo domiciliario (3)», coherente con la tabla.
+   (más puntos al caso menos grave). Se implementa literal por decisión del IP (spec §5.2). El caso clínico 1 puntúa «manejo domiciliario (3)», coherente con la tabla.
+   **03/11/2026:** la Tabla 1 del artículo publicado del modelo («Variables for measuring the priority level of patients with congenital
+   bleeding disorders») recoge los mismos valores (*Bleeding requiring hospital admission* 2; *managed on an outpatient basis* 3): no es
+   una errata de transcripción. El aviso de la pantalla dice ahora que coincide con el artículo. La Tabla 1 del artículo coincide además
+   con la herramienta en todas las variables, puntos y máximos por dimensión (3, 25, 15 y 16) y en las excepciones (pediátrico, terapia avanzada).
 2. **Número de hemorragias**: la tabla dice «más de 2 al año»; el caso clínico dice «2 o más». Se usa la tabla (> 2).
 3. **Patología articular degenerativa (2)** frente a **Estado/salud articular (3)**: M no aclara si un mismo daño articular puntúa en ambas.
    Se preguntan por separado y se avisa.

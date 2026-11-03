@@ -85,7 +85,7 @@ export const STRAT_VARIABLES: StratVariable[] = [
       { value: 'none', label: 'Sin hemorragias', points: 0 },
       { value: 'hospital_admission', label: 'Hemorragias que requieren ingreso hospitalario', points: 2 },
       { value: 'outpatient', label: 'Hemorragias manejadas de forma ambulatoria o en domicilio', points: 3 }],
-    hint: 'Puntuación tal como figura en M (ingreso 2, ambulatorio 3). Pendiente de confirmar con los autores: ver documentación.' },
+    hint: 'Puntuación del modelo (ingreso 2, ambulatorio/domicilio 3), igual en el documento CMO de coagulopatías y en la Tabla 1 del artículo publicado del modelo.' },
   { id: 'hemophilia_severity', dimension: 'clinical', modelVariable: 'Gravedad para hemofilia', source: 'M Tabla 2, p. 13', appliesTo: ['HA', 'HB'],
     question: 'Gravedad de la hemofilia (nivel de FVIII:C o FIX:C)', options: [
       { value: 'mild', label: 'Leve (>5 % – <40 %)', points: 0 },
