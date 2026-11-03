@@ -3,7 +3,7 @@
 Estado: implementado en frontend (este repositorio) y en el historial canónico de migraciones (`ramonmorillo/dermapex`,
 `supabase/migrations/20261026120000_coag_questionnaires.sql` + `db-tests/70_coag_questionnaires.sql`).
 **Migración aplicada en Supabase** (`coag_questionnaires`, versión registrada 20261026161652; comprobado el 28/10/2026): ver §8.
-**VERITAS (03/11/2026)**: claves de puntuación aportadas por el IP e implementadas (frontend y migración `20261103120000_coag_veritas_scoring.sql` de `ramonmorillo/dermapex`, **pendiente de aplicar en Supabase**; §9). Hasta aplicarla, la BD sigue rechazando respuestas de VERITAS-Pro.
+**VERITAS (03/11/2026)**: claves de puntuación aportadas por el IP e implementadas (frontend y migración `20261103120000_coag_veritas_scoring.sql` de `ramonmorillo/dermapex`, **aplicada en Supabase el 03/11/2026**, versión registrada 20261103084636; §9).
 
 ## 1. Fuentes y clasificación de los documentos
 
@@ -159,8 +159,12 @@ La migración nueva (repositorio `ramonmorillo/dermapex`, rama `claude/elegant-j
 4. Pruebas: `db-tests/71_coag_veritas_scoring.sql` (16 aserciones; mismos ejemplos que `tests/questionnaireScoring.test.ts`) y
    ajuste de `70_*`. Ejecutado en PostgreSQL 16 local: 463 aserciones, todas superadas.
 
-**Orden de despliegue**: aplicar la migración **antes** de publicar este frontend (o a la vez). Sin ella, VERITAS-Pro sigue
-rechazado y los totales aparecen como «pendiente de recalcular» (nunca se calcula un total en el navegador para guardarlo).
+**Despliegue (realizado el 03/11/2026)**: migración aplicada en Supabase como `coag_veritas_scoring` (versión registrada
+20261103084636). Verificación en producción: los 3 VERITAS-PRN existentes recalculados (totales 64, 68 y 88, iguales al cálculo
+independiente con `scoring.ts`), respuestas intactas (huella MD5 igual a la instantánea previa), revisión 1 → 2 y una entrada de
+auditoría por registro; IEXPAC, EQ-5D-3L y EVASAF siguen en `coamo-q-1`. Prueba funcional revertida (sin rastro): VERITAS-Pro
+admitido, todo «Siempre» = 68, ítem 11 invertido = 5. Si la migración faltara, VERITAS-Pro se rechazaría y los totales
+aparecerían como «pendiente de recalcular» (nunca se calcula un total en el navegador para guardarlo).
 Exportación: `coamo-q-export-3` (`vprn_total`, `vpro_total`, `*_scoring_version`); exportación de investigación: `vprn_total_v0/vf`,
 `vpro_total_v0/vf`, cambios VF − V0 y columna `puntos` en `cuestionarios_items`.
 Los registros previos de VERITAS-Pro «no aplicable» con motivo `source_document_unavailable` siguen siendo válidos: revisar si deben reabrirse.
