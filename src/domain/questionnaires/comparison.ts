@@ -10,7 +10,7 @@
 
 import { INSTRUMENTS, instrumentItems, optionsFor, type InstrumentCode } from './instruments';
 import { effectiveStatus, STATUS_LABEL, type AdministrationStatus, type QuestionnaireAdministration } from './administration';
-import { veritasItemScore, type Eq5dScores, type IexpacScores, type VeritasScores } from './scoring';
+import { evasafDescriptiveSum, veritasItemScore, type Eq5dScores, type IexpacScores, type VeritasScores } from './scoring';
 
 export type ItemChange = 'better' | 'worse' | 'same' | null;
 
@@ -122,6 +122,14 @@ export function compareInstrument(
   }
   if (code === 'EVASAF') {
     paired = a0 !== null && af !== null;
+    const t0 = a0 ? evasafDescriptiveSum(a0.responses) : null;
+    const tf = af ? evasafDescriptiveSum(af.responses) : null;
+    metrics.push({ key: 'descriptive_sum', label: 'EVASAF suma descriptiva (no validada)', v0: t0, vf: tf, delta: delta(t0, tf), scale: '10-50',
+      direction: 'higher_is_better', change: ordinalChange(t0, tf, true) });
+    for (const [label, a] of [['V0', a0], ['VF', af]] as const) {
+      if (a && evasafDescriptiveSum(a.responses) === null) warnings.push(`${label}: algún ítem sin responder; sin suma descriptiva (no se imputa).`);
+    }
+    warnings.push('La suma EVASAF es descriptiva (no validada; sin puntos de corte): describe el cambio individual, no su relevancia clínica.');
   }
   if (code === 'VERITAS_PRN' || code === 'VERITAS_PRO') {
     const s0 = a0?.scores as VeritasScores | undefined;

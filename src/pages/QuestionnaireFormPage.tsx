@@ -15,7 +15,7 @@ import {
   ADMINISTRATION_MODE_LABEL, EQ5D_VAS_SCALE, EQ5D_VAS_TEXT, INSTRUMENTS, INSTRUMENT_CODES, optionsFor,
   type AdministrationMode, type InstrumentCode, type QuestionnaireItem,
 } from '../domain/questionnaires/instruments';
-import { computeScores, formatScore, isComplete, progress, type Eq5dScores, type IexpacScores, type VeritasScores } from '../domain/questionnaires/scoring';
+import { computeScores, formatScore, isComplete, progress, type Eq5dScores, type IexpacScores, type VeritasScores, evasafDescriptiveSum } from '../domain/questionnaires/scoring';
 import { DIAGNOSIS_LABEL, formatDate, todayIso } from '../domain/study';
 import { getOwnProfile } from '../services/coamoDataService';
 import {
@@ -315,7 +315,17 @@ function QuestionnaireForm({ visitId, instrument }: { visitId: string; instrumen
                 ? <>{def.shortName} total (24-120; menor = mayor adherencia): <strong>{veritas.total}</strong>. Sin puntos de corte documentados.</>
                 : <>{def.shortName} total: no calculable ({veritas.items_answered}/24 ítems respondidos; no se imputan ausentes).</>
             ) : null}
-            {code === 'EVASAF' ? <>{def.scoringSummary}</> : null}
+            {code === 'EVASAF' ? (() => {
+              const sum = evasafDescriptiveSum(draft.responses);
+              return (
+                <>
+                  {sum !== null
+                    ? <>EVASAF suma descriptiva (10-50; mayor = mejor atención farmacéutica percibida): <strong>{sum}</strong>.</>
+                    : <>EVASAF suma descriptiva: no calculable ({prog.answered}/10 ítems respondidos; no se imputan ausentes).</>}
+                  <p className="coamo-field-hint" style={{ marginTop: 'var(--sp-2)' }}>{def.scoringSummary}</p>
+                </>
+              );
+            })() : null}
             {code === 'IEXPAC' ? <p className="coamo-field-hint" style={{ marginTop: 'var(--sp-2)' }}>{def.scoringSummary}</p> : null}
           </div>
         </section>

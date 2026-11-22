@@ -91,6 +91,25 @@ export function evasafScores(responses: Responses): EvasafScores {
 }
 
 /**
+ * EVASAF · suma DESCRIPTIVA del estudio (22/11/2026). Ni el documento «PROYECTO EVASAF» ni el protocolo definen una
+ * regla de agregación: esto NO es una puntuación total validada ni tiene puntos de corte. Se calcula solo con los
+ * 10 ítems respondidos (1-5 cada uno; rango 10-50; sin imputación ni prorrateo). Dirección confirmada para COAMO:
+ * mayor = mejor atención farmacéutica percibida. No forma parte de scores (la BD no la guarda): se deriva de
+ * responses en pantalla y en la exportación, con la regla EVASAF_DESCRIPTIVE_SUM_RULE.
+ */
+export const EVASAF_DESCRIPTIVE_SUM_VERSION = 'coamo-evasaf-suma-descriptiva-1';
+export const EVASAF_DESCRIPTIVE_SUM_RULE =
+  'Suma descriptiva de los 10 ítems (1-5): rango 10-50; mayor = mejor atención farmacéutica percibida. Solo con los 10 ítems respondidos (sin imputación). ' +
+  'No es una puntuación total validada: ni el documento EVASAF ni el protocolo definen agregación; sin puntos de corte.';
+
+export function evasafDescriptiveSum(responses: Responses | null | undefined): number | null {
+  if (!responses) return null;
+  const items = seq(1, 10);
+  if (!items.every((n) => has(responses, q(n)) && responses[q(n)] >= 1 && responses[q(n)] <= 5)) return null;
+  return items.reduce((sum, n) => sum + responses[q(n)], 0);
+}
+
+/**
  * Clave de puntuación de los documentos «VERITAS-PRN puntuación» y «VERITAS-Pro puntuación» (IP, 03/11/2026;
  * Duncan et al., Haemophilia 2010). La respuesta guardada es el código de posición (1 Siempre … 5 Nunca);
  * en los ítems invertidos (redactados en sentido de no adherencia) el documento puntúa Siempre = 5 … Nunca = 1.

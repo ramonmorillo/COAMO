@@ -153,7 +153,25 @@
 .coamo-pair-chart { margin: 0; }
 .coamo-pair-chart figcaption { margin-bottom: var(--sp-2); }
 
+/* Evolución gráfica por instrumento: una serie, su propia escala, sin interpolación. */
+.coamo-trend-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--sp-5); }
+.coamo-trend { margin: 0; min-width: 0; }
+.coamo-trend-svg { width: 100%; height: auto; display: block; margin: var(--sp-2) 0; }
+.coamo-trend-grid { stroke: var(--iris-border); stroke-width: 1; }
+.coamo-trend-axis { font-size: 14px; fill: var(--iris-text-secondary); }
+.coamo-trend-value { font-size: 16px; font-weight: 600; fill: var(--iris-text); }
+.coamo-trend-line { stroke: var(--iris-teal-700); stroke-width: 2; }
+.coamo-trend-point { fill: var(--iris-teal-700); stroke: var(--iris-surface); stroke-width: 2; }
+.coamo-trend-missing path { stroke: var(--iris-text-secondary); stroke-width: 2; fill: none; }
+
+/* Hoja de cuestionario para papel (A4): opciones en línea con espacio para marcar. */
+.coamo-print-options { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; }
+
 @media print {
+  @page { size: A4; }
+  .coamo-print-sheet { font-size: 11pt; line-height: 1.45; }
+  .coamo-print-sheet h1 { font-size: 15pt; }
+  .coamo-print-sheet h2 { font-size: 12.5pt; }
   .topbar, .app-footer, .skip-link, .coamo-no-print { display: none !important; }
   body, .app-shell, .main-content { background: #fff !important; }
   .card { box-shadow: none !important; border: 1px solid #ccc; }

@@ -17,6 +17,7 @@ import { activatesException, DIMENSION_LABEL, STRAT_VARIABLES, STRATIFICATION_MO
 import {
   DIAGNOSIS_LABEL, MODALITY_LABEL, QUESTIONNAIRE_SUPPORT_LABEL, SEX_LABEL, STATUS_LABEL, STATUS_REASON_LABEL, VISIT_STATUS_LABEL, VISIT_TYPE_LABEL,
 } from '../../domain/study';
+import { EVASAF_DESCRIPTIVE_SUM_RULE, EVASAF_DESCRIPTIVE_SUM_VERSION, evasafDescriptiveSum, type Responses } from '../../domain/questionnaires/scoring';
 import type { TableRequest } from './reader';
 import type { ColumnSpec, ColumnType, Dataset } from './spec';
 
@@ -485,6 +486,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         c(`${p}_estado${suffix}`, `${name}: estado${visitLabel}`, 'string', 'coag_questionnaire_administrations.status', { instrument: name, visit, values: QSTATUS_VALUES, notes: 'Vacío = sin registro en la visita (pendiente de iniciar).' }),
         c(`${p}_motivo${suffix}`, `${name}: motivo no aplicable / no realizado${visitLabel}`, 'string', 'coag_questionnaire_administrations.status_reason_code', { instrument: name, visit, values: QREASON_VALUES }),
         ...Q_METRICS[code].map((m) => c(`${p}_${m.suffix}${suffix}`, `${m.label}${visitLabel}`, m.type, 'coag_questionnaire_administrations.scores', { instrument: name, visit, rule: `${m.rule} Calculado por la BD (${QUESTIONNAIRE_SCORING_VERSION}).` })),
+        ...(code === 'EVASAF' ? [c(`evasaf_suma_descriptiva${suffix}`, `EVASAF suma descriptiva (10-50; mayor = mejor atención farmacéutica percibida; NO validada)${visitLabel}`, 'integer', 'derivada', { instrument: name, visit, rule: `${EVASAF_DESCRIPTIVE_SUM_RULE} Derivada en la exportación desde responses (${EVASAF_DESCRIPTIVE_SUM_VERSION}); solo registros completados.` })] : []),
         ...(code === 'EVASAF' ? [c(`evasaf_comentarios${suffix}`, `EVASAF: comentarios del paciente${visitLabel}`, 'string', 'coag_questionnaire_administrations.comments', { instrument: name, visit, definition: 'Texto libre. Vacío = sin comentarios o no recogido (anterior al 03/11/2026).' })] : []),
       ];
     });
@@ -497,7 +499,10 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
       out[`${p}_estado${suffix}`] = a?.status ?? null;
       out[`${p}_motivo${suffix}`] = a?.status_reason_code ?? null;
       for (const m of Q_METRICS[code]) out[`${p}_${m.suffix}${suffix}`] = a ? scoreValue(a.scores, m.key, m.type) : null;
-      if (code === 'EVASAF') out[`evasaf_comentarios${suffix}`] = typeof a?.comments === 'string' ? a.comments : null;
+      if (code === 'EVASAF') {
+        out[`evasaf_suma_descriptiva${suffix}`] = a?.status === 'completed' ? evasafDescriptiveSum(a.responses as Responses) : null;
+        out[`evasaf_comentarios${suffix}`] = typeof a?.comments === 'string' ? a.comments : null;
+      }
     }
     return out;
   };
