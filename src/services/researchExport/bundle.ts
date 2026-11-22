@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 
 import { parseCsv, writeCsv, type CsvCell, type CsvDialect } from './csv';
 import { PROJECT_INSTITUTIONAL_REFERENCE } from '../../constants/institutional';
+import { STRATIFICATION_RULES } from '../../domain/stratification';
 import { buildDatasets, EXCLUDED_COLUMNS, QUESTIONNAIRE_SCORING_VERSION, STRATIFICATION_SCORING_VERSION, TABLE_REQUESTS, type RawData, type TableKey } from './datasets';
 import { ExportIntegrityError, readWholeTable, type DataSource, type TableResult } from './reader';
 import { assertValidColumnNames, MISSING_CODE_NOTE, serializeCell, type ColumnSpec, type Dataset } from './spec';
@@ -40,6 +41,8 @@ export type ExportManifest = {
   app_version: string;
   questionnaire_scoring_version: string;
   stratification_scoring_version: string;
+  /** Reglas y umbrales de cada versión del modelo CMO (puntos de corte, excepciones, datos ausentes). */
+  stratification_rules: typeof STRATIFICATION_RULES;
   study: { title: string; ethics_committee: string | null; ethics_registry: string | null; ethics_session_date: string | null };
   csv: { encoding: 'UTF-8'; bom: boolean; delimiter: string; decimal: string; line_ending: 'CRLF'; quoting: 'RFC 4180' };
   scope: { description: string; centers: string[]; patients: number; visits: number };
@@ -326,6 +329,7 @@ export async function buildExportBundle(raw: RawData, results: TableResult<unkno
     app_version: options.appVersion,
     questionnaire_scoring_version: QUESTIONNAIRE_SCORING_VERSION,
     stratification_scoring_version: STRATIFICATION_SCORING_VERSION,
+    stratification_rules: STRATIFICATION_RULES,
     study: {
       title: PROJECT_INSTITUTIONAL_REFERENCE.projectTitle,
       ethics_committee: PROJECT_INSTITUTIONAL_REFERENCE.ethicsCommittee,

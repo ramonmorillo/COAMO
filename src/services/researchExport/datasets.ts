@@ -128,7 +128,8 @@ function clinicalColumn(field: ClinicalField, name = field.key, labelSuffix = ''
     unit: 'unit' in field ? field.unit : undefined,
     definition: field.hint,
     visit,
-    notes: [field.source, field.appliesTo ? `Solo ${field.appliesTo.join('/')}: vacío en el resto de diagnósticos.` : null].filter(Boolean).join('. '),
+    notes: [field.source, field.appliesTo ? `Solo ${field.appliesTo.join('/')}: vacío en el resto de diagnósticos.` : null,
+      field.hiddenFor ? `No se recoge en ${field.hiddenFor.join('/')} desde el 22/11/2026 (formulario condicional); los valores registrados antes se conservan.` : null].filter(Boolean).join('. '),
   });
 }
 

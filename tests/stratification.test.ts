@@ -182,3 +182,77 @@ describe('excepciones del modelo: solo anulan los puntos cuando se activan', () 
     expect(activatesException(adv, 'no')).toBe(false);
   });
 });
+
+// ── Límites de los tres niveles y efecto teórico de retirar «calidad de vida» (revisión del colaborador, fase 4.4) ──
+// La retirada de la variable NO está decidida (el modelo v2.0 la incluye): estas pruebas documentan que la decisión
+// no crearía huecos ni solapamientos, porque los puntos de corte se fijaron SIN esa variable (modelo p. 17).
+describe('límites de prioridad: clasificación completa, contigua y sin huecos', () => {
+  it('cada puntuación entera de 0 a 59 recibe exactamente un nivel; P3 0-19, P2 20-27, P1 28-59', () => {
+    const levels = Array.from({ length: 60 }, (_, s) => priorityForScore(s));
+    expect(levels.slice(0, 20).every((p) => p === 3)).toBe(true);
+    expect(levels.slice(20, 28).every((p) => p === 2)).toBe(true);
+    expect(levels.slice(28).every((p) => p === 1)).toBe(true);
+    // Monótona: más puntos nunca bajan la prioridad asistencial.
+    for (let s = 1; s < 60; s++) expect(levels[s]).toBeLessThanOrEqual(levels[s - 1]);
+  });
+  it('fronteras exactas 19/20 y 27/28 en el motor completo (no solo en priorityForScore)', () => {
+    // Base sin puntos y suma de respuestas «sí» hasta la puntuación buscada.
+    const base = allNo('HA');
+    const withScore = (target: number): StratAnswers => {
+      const answers: StratAnswers = { ...base, age: '18_50' }; // 1
+      let score = 1;
+      for (const v of applicableVariables('HA').filter((x) => !x.exception && x.id !== 'age' && x.options.length === 2)) {
+        const pts = v.options[0].points;
+        if (score + pts <= target) { answers[v.id] = 'yes'; score += pts; }
+      }
+      expect(score).toBe(target);
+      return answers;
+    };
+    for (const [score, priority] of [[19, 3], [20, 2], [27, 2], [28, 1]] as const) {
+      const r = computeStratification('HA', withScore(score));
+      expect(r.status).toBe('determined');
+      expect(r.score).toBe(score);
+      expect(r.modelPriority).toBe(priority);
+    }
+  });
+  it('sin calidad de vida el máximo sería 58 y los rangos seguirían contiguos (P1 28-58); con ella, 59', () => {
+    const maxWith = applicableVariables('EVW').reduce((t, v) => t + maxOf(v.id), 0);
+    expect(maxWith).toBe(59);
+    expect(maxWith - maxOf('low_qol')).toBe(58);
+    expect(priorityForScore(58)).toBe(1);
+    expect(priorityForScore(28)).toBe(1);
+  });
+  it('calidad de vida en la frontera: con 20 puntos de los que 1 es calidad de vida → P2 con aviso de dependencia', () => {
+    const answers: StratAnswers = { ...allNo('HA'), age: '18_50', prophylaxis: 'yes', inhibitors: 'yes', joint_status: 'yes', non_adherence: 'yes', transition: 'yes', limited_knowledge: 'no', socioeconomic: 'no', degenerative_joint: 'yes', low_qol: 'yes' };
+    // Edad 1 + profilaxis 3 + inhibidores 3 + articular 3 + adherencia 4 + transición 4 + calidad de vida 1 = 19.
+    const r = computeStratification('HA', { ...answers, degenerative_joint: 'no', dose_change: 'yes' }); // + 2 = 21
+    expect(r.score).toBe(21);
+    const r20 = computeStratification('HA', { ...answers, degenerative_joint: 'no', obesity: 'yes' }); // + 1 = 20
+    expect(r20.score).toBe(20);
+    expect(r20.modelPriority).toBe(2);
+    expect(r20.warnings.join(' ')).toMatch(/calidad de vida/);
+    expect(computeStratification('HA', { ...answers, degenerative_joint: 'no', dose_change: 'yes' }).warnings.join(' ')).not.toMatch(/depende del punto de «calidad de vida»/);
+  });
+  it('el cambio de denominación de inhibidores no altera su puntuación (Sí = 3, No = 0) ni su aplicabilidad', () => {
+    const v = STRAT_VARIABLES.find((x) => x.id === 'inhibitors')!;
+    expect(v.question).toBe('Presencia de inhibidores frente a factor VIII, factor IX o factor de von Willebrand');
+    expect(v.options.map((o) => [o.value, o.points])).toEqual([['yes', 3], ['no', 0]]);
+    expect(v.appliesTo).toBeUndefined();
+  });
+  it('las observaciones visibles no empiezan por la abreviatura «M»', () => {
+    for (const v of STRAT_VARIABLES) {
+      expect(v.source.startsWith('M ')).toBe(false);
+      if (v.hint) expect(/^M\s/.test(v.hint)).toBe(false);
+    }
+  });
+});
+
+describe('versionado del algoritmo', () => {
+  it('la versión vigente tiene reglas registradas coherentes con el motor', async () => {
+    const { STRATIFICATION_RULES, STRATIFICATION_MODEL_VERSION, PRIORITY_1_CUTOFF, PRIORITY_2_CUTOFF } = await import('../src/domain/stratification');
+    const rules = STRATIFICATION_RULES[STRATIFICATION_MODEL_VERSION];
+    expect(rules.cutoffs).toEqual({ priority1_min: PRIORITY_1_CUTOFF, priority2_min: PRIORITY_2_CUTOFF });
+    expect(rules.theoretical_max).toBe(applicableVariables('HA').reduce((t, v) => t + maxOf(v.id), 0));
+    expect(rules.outside_pretest.every((id) => STRAT_VARIABLES.some((v) => v.id === id && v.outsidePretest))).toBe(true);
+  });
+});

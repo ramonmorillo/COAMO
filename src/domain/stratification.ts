@@ -20,6 +20,26 @@ export const PRIORITY_1_CUTOFF = 28;
 export const PRIORITY_2_CUTOFF = 20;
 
 export type Priority = 1 | 2 | 3;
+
+/**
+ * Reglas y umbrales de cada versión del modelo, para la trazabilidad de las estratificaciones guardadas (la BD guarda
+ * model_version en cada registro y nunca recalcula un registro histórico con otra versión). Una versión nueva del
+ * algoritmo debe AÑADIR una entrada aquí y en coag_private.stratification_result, no modificar la existente.
+ */
+export const STRATIFICATION_RULES: Record<string, {
+  source: string; cutoffs: { priority1_min: number; priority2_min: number }; theoretical_max: number;
+  exceptions: string[]; missing_data: string; professional_override: string; outside_pretest: string[];
+}> = {
+  'CMO-COAG-SEFH-v2.0': {
+    source: 'SEFH, Adaptación del Modelo de Atención Farmacéutica CMO al paciente con coagulopatías congénitas, v2.0 (Tablas 1-4, pp. 12-16; p. 17)',
+    cutoffs: { priority1_min: 28, priority2_min: 20 },
+    theoretical_max: 59,
+    exceptions: ['Terapia génica u otra terapia avanzada → Prioridad 1 sea cual sea la puntuación', 'Menor de 18 años → modelo pediátrico (sin nivel)'],
+    missing_data: 'Pregunta sin responder ≠ 0 puntos: intervalo [mínimo, máximo]; nivel solo si ambos extremos coinciden',
+    professional_override: 'Elevación por criterio profesional solo hacia arriba y con motivo (p. 19)',
+    outside_pretest: ['low_qol'],
+  },
+};
 export type Dimension = 'demographic' | 'clinical' | 'treatment' | 'social';
 
 export const DIMENSION_LABEL: Record<Dimension, string> = {
@@ -59,92 +79,94 @@ export function activatesException(variable: Pick<StratVariable, 'exception'> | 
 
 export const STRAT_VARIABLES: StratVariable[] = [
   // ── Tabla 1 · Demográfica (máx. 3) ──
-  { id: 'age', dimension: 'demographic', modelVariable: 'Edad', source: 'M Tabla 1, p. 12', exception: 'pediatric',
+  { id: 'age', dimension: 'demographic', modelVariable: 'Edad', source: 'Modelo CMO, Tabla 1, p. 12', exception: 'pediatric',
     question: 'Edad del paciente', options: [
       { value: 'lt18', label: 'Menor de 18 años (modelo pediátrico)', points: 0 },
       { value: '18_50', label: 'Entre 18 y 50 años', points: 1 },
       { value: 'gt50', label: 'Más de 50 años', points: 2 }] },
-  { id: 'obesity', dimension: 'demographic', modelVariable: 'Peso', source: 'M Tabla 1, p. 12',
+  { id: 'obesity', dimension: 'demographic', modelVariable: 'Peso', source: 'Modelo CMO, Tabla 1, p. 12',
     question: 'Obesidad: IMC ≥ 30 kg/m²', options: yesNo(1) },
 
   // ── Tabla 2 · Clínica (máx. 25) ──
-  { id: 'inhibitors', dimension: 'clinical', modelVariable: 'Desarrollo de inhibidores frente al FVIII o FIX', source: 'M Tabla 2, p. 13',
-    question: 'Ha desarrollado inhibidores contra el factor VIII o IX', options: yesNo(3) },
-  { id: 'pain', dimension: 'clinical', modelVariable: 'Dolor', source: 'M Tabla 2, p. 13',
+  { id: 'inhibitors', dimension: 'clinical', modelVariable: 'Desarrollo de inhibidores frente al FVIII o FIX', source: 'Modelo CMO, Tabla 2, p. 13',
+    question: 'Presencia de inhibidores frente a factor VIII, factor IX o factor de von Willebrand', options: yesNo(3),
+    hint: 'Denominación actualizada a petición del equipo investigador (22/11/2026); la puntuación (Sí = 3) no cambia. En el modelo: «Desarrollo de inhibidores frente al FVIII o FIX».' },
+  { id: 'pain', dimension: 'clinical', modelVariable: 'Dolor', source: 'Modelo CMO, Tabla 2, p. 13',
     question: 'Dolor', options: [
       { value: 'none', label: 'Sin dolor', points: 0 },
       { value: 'mild_moderate', label: 'Dolor leve/moderado', points: 1 },
       { value: 'persistent', label: 'Dolor persistente por daño articular crónico (sangrados repetidos)', points: 2 },
       { value: 'acute', label: 'Dolor agudo por hemartrosis o hematoma muscular (hemorragia activa)', points: 3 }],
     hint: 'El dolor agudo por hemorragia activa no se recoge en los datos clínicos del protocolo: indíquelo aquí.' },
-  { id: 'joint_status', dimension: 'clinical', modelVariable: 'Estado/salud articular', source: 'M Tabla 2, p. 13',
+  { id: 'joint_status', dimension: 'clinical', modelVariable: 'Estado/salud articular', source: 'Modelo CMO, Tabla 2, p. 13',
     question: 'Complicaciones musculoesqueléticas por las hemorragias (artropatía, contracturas permanentes, deformidades, discapacidad o prótesis articular secundaria)',
     options: yesNo(3) },
-  { id: 'bleeding_management', dimension: 'clinical', modelVariable: 'Gravedad (según tipo de hemorragia)', source: 'M Tabla 2, p. 13',
+  { id: 'bleeding_management', dimension: 'clinical', modelVariable: 'Gravedad (según tipo de hemorragia)', source: 'Modelo CMO, Tabla 2, p. 13',
     question: 'Manejo de las hemorragias', options: [
       { value: 'none', label: 'Sin hemorragias', points: 0 },
       { value: 'hospital_admission', label: 'Hemorragias que requieren ingreso hospitalario', points: 2 },
       { value: 'outpatient', label: 'Hemorragias manejadas de forma ambulatoria o en domicilio', points: 3 }],
     hint: 'Puntuación del modelo (ingreso 2, ambulatorio/domicilio 3), igual en el documento CMO de coagulopatías y en la Tabla 1 del artículo publicado del modelo.' },
-  { id: 'hemophilia_severity', dimension: 'clinical', modelVariable: 'Gravedad para hemofilia', source: 'M Tabla 2, p. 13', appliesTo: ['HA', 'HB'],
+  { id: 'hemophilia_severity', dimension: 'clinical', modelVariable: 'Gravedad para hemofilia', source: 'Modelo CMO, Tabla 2, p. 13', appliesTo: ['HA', 'HB'],
     question: 'Gravedad de la hemofilia (nivel de FVIII:C o FIX:C)', options: [
       { value: 'mild', label: 'Leve (>5 % – <40 %)', points: 0 },
       { value: 'moderate', label: 'Moderada (1-5 %)', points: 1 },
       { value: 'severe', label: 'Grave (<1 %)', points: 3 }] },
-  { id: 'vwd_type', dimension: 'clinical', modelVariable: 'Gravedad para EVW', source: 'M Tabla 2, p. 13', appliesTo: ['EVW'],
+  { id: 'vwd_type', dimension: 'clinical', modelVariable: 'Gravedad para EVW', source: 'Modelo CMO, Tabla 2, p. 13', appliesTo: ['EVW'],
     question: 'Tipo de enfermedad de von Willebrand', options: [
       { value: '1', label: 'Tipo 1', points: 0 },
       { value: '2', label: 'Tipo 2', points: 1 },
       { value: '3', label: 'Tipo 3', points: 3 }] },
-  { id: 'spontaneous_bleeds_gt2', dimension: 'clinical', modelVariable: 'Número de hemorragias', source: 'M Tabla 2, p. 14',
+  { id: 'spontaneous_bleeds_gt2', dimension: 'clinical', modelVariable: 'Número de hemorragias', source: 'Modelo CMO, Tabla 2, p. 14',
     question: 'Más de 2 hemorragias espontáneas al año que han requerido tratamiento', options: yesNo(4) },
-  { id: 'comorbidity', dimension: 'clinical', modelVariable: 'Presencia de comorbilidades', source: 'M Tabla 2, p. 14',
+  { id: 'comorbidity', dimension: 'clinical', modelVariable: 'Presencia de comorbilidades', source: 'Modelo CMO, Tabla 2, p. 14',
     question: 'Comorbilidades además de la patología de base (VIH, hepatitis C, cáncer, ACV, enfermedad cardiovascular, DM, osteoporosis, enfermedad renal, etc.)',
     options: yesNo(1) },
-  { id: 'degenerative_joint', dimension: 'clinical', modelVariable: 'Presencia de comorbilidades', source: 'M Tabla 2, p. 14',
+  { id: 'degenerative_joint', dimension: 'clinical', modelVariable: 'Presencia de comorbilidades', source: 'Modelo CMO, Tabla 2, p. 14',
     question: 'Patología articular degenerativa', options: yesNo(2),
-    hint: 'Se suma a la anterior (puntuación máxima de M). Su relación con «Estado/salud articular» no está definida en M.' },
-  { id: 'psychological', dimension: 'clinical', modelVariable: 'Problemas psicológicos', source: 'M Tabla 2, p. 14',
+    hint: 'Se suma a la anterior (puntuación máxima del modelo). Su relación con «Estado/salud articular» no está definida en el modelo.' },
+  { id: 'psychological', dimension: 'clinical', modelVariable: 'Problemas psicológicos', source: 'Modelo CMO, Tabla 2, p. 14',
     question: 'Problemas relacionados con la salud mental (ansiedad, depresión)', options: yesNo(3) },
 
   // ── Tabla 3 · Tratamiento (máx. 15) ──
-  { id: 'advanced_therapy', dimension: 'treatment', modelVariable: 'Agente hemostásico empleado', source: 'M Tabla 3, p. 15; excepción p. 17',
+  { id: 'advanced_therapy', dimension: 'treatment', modelVariable: 'Agente hemostásico empleado', source: 'Modelo CMO, Tabla 3, p. 15; excepción p. 17',
     exception: 'advanced_therapy', question: 'Terapia génica y/o cualquier otra terapia avanzada', options: yesNo(0) },
-  { id: 'route', dimension: 'treatment', modelVariable: 'Vía de administración del agente hemostático', source: 'M Tabla 3, p. 15',
+  { id: 'route', dimension: 'treatment', modelVariable: 'Vía de administración del agente hemostático', source: 'Modelo CMO, Tabla 3, p. 15',
     question: 'Vía de administración', options: [
       { value: 'sc_only', label: 'Solo subcutánea (o sin agente parenteral)', points: 0 },
       { value: 'sc_iv', label: 'Subcutánea combinada con intravenosa', points: 1 },
       { value: 'iv', label: 'Intravenosa', points: 2 }],
-    hint: 'M no puntúa la vía subcutánea exclusiva (0 puntos, coherente con el caso clínico 1).' },
-  { id: 'dose_change', dimension: 'treatment', modelVariable: 'Cambios en el régimen de la medicación dispensada', source: 'M Tabla 3, p. 15',
+    hint: 'El modelo no puntúa la vía subcutánea exclusiva (0 puntos, coherente con el caso clínico 1).' },
+  { id: 'dose_change', dimension: 'treatment', modelVariable: 'Cambios en el régimen de la medicación dispensada', source: 'Modelo CMO, Tabla 3, p. 15',
     question: 'Cambio en la dosis o en la pauta posológica desde la última dispensación', options: yesNo(2) },
-  { id: 'extra_doses', dimension: 'treatment', modelVariable: 'Cambios en el régimen de la medicación dispensada', source: 'M Tabla 3, p. 15',
+  { id: 'extra_doses', dimension: 'treatment', modelVariable: 'Cambios en el régimen de la medicación dispensada', source: 'Modelo CMO, Tabla 3, p. 15',
     question: 'Dosis adicionales o modificaciones puntuales de pauta desde la última dispensación', options: yesNo(3) },
-  { id: 'home_dispensing', dimension: 'treatment', modelVariable: 'Dispensación domiciliaria', source: 'M Tabla 3, p. 15',
+  { id: 'home_dispensing', dimension: 'treatment', modelVariable: 'Dispensación domiciliaria', source: 'Modelo CMO, Tabla 3, p. 15',
     question: 'No acude presencialmente a FH: recibe la medicación a domicilio o en oficina de farmacia', options: yesNo(1) },
-  { id: 'prophylaxis', dimension: 'treatment', modelVariable: 'Régimen de tratamiento', source: 'M Tabla 3, p. 15',
+  { id: 'prophylaxis', dimension: 'treatment', modelVariable: 'Régimen de tratamiento', source: 'Modelo CMO, Tabla 3, p. 15',
     question: 'Tratamiento profiláctico (primario, secundario o terciario)', options: yesNo(3) },
-  { id: 'non_adherence', dimension: 'treatment', modelVariable: 'Falta de adherencia al tratamiento', source: 'M Tabla 3, p. 15',
+  { id: 'non_adherence', dimension: 'treatment', modelVariable: 'Falta de adherencia al tratamiento', source: 'Modelo CMO, Tabla 3, p. 15',
     question: 'Falta de adherencia y/o persistencia subóptima según el registro de dispensación y la HCE', options: yesNo(4),
-    hint: 'M no fija un umbral numérico: juicio del farmacéutico con el registro de dispensación y la HCE.' },
+    hint: 'El modelo no fija un umbral numérico: juicio del farmacéutico con el registro de dispensación y la HCE.' },
 
   // ── Tabla 4 · Sociosanitaria (máx. 16; 15 en el pretest) ──
-  { id: 'socioeconomic', dimension: 'social', modelVariable: 'Entorno familiar y situación socioeconómica', source: 'M Tabla 4, p. 16',
+  { id: 'socioeconomic', dimension: 'social', modelVariable: 'Entorno familiar y situación socioeconómica', source: 'Modelo CMO, Tabla 4, p. 16',
     question: 'Condiciones socioeconómicas desfavorables', options: yesNo(3),
     hint: 'Incluye: no puede almacenar o administrar la medicación en condiciones adecuadas, sin hogar, aislamiento social, sin apoyo familiar (con o sin dependencia funcional), inestabilidad financiera, etc.' },
-  { id: 'intense_activity', dimension: 'social', modelVariable: 'Estilo de vida', source: 'M Tabla 4, p. 16',
+  { id: 'intense_activity', dimension: 'social', modelVariable: 'Estilo de vida', source: 'Modelo CMO, Tabla 4, p. 16',
     question: 'Realiza actividad física intensa', options: yesNo(1) },
-  { id: 'cv_risk', dimension: 'social', modelVariable: 'Estilo de vida', source: 'M Tabla 4, p. 16',
+  { id: 'cv_risk', dimension: 'social', modelVariable: 'Estilo de vida', source: 'Modelo CMO, Tabla 4, p. 16',
     question: 'Uno o más factores de riesgo cardiovascular (hipertensión, obesidad, tabaquismo, entre otros)', options: yesNo(2) },
-  { id: 'access_difficulty', dimension: 'social', modelVariable: 'Dificultades de acceso a la atención hospitalaria', source: 'M Tabla 4, p. 16',
+  { id: 'access_difficulty', dimension: 'social', modelVariable: 'Dificultades de acceso a la atención hospitalaria', source: 'Modelo CMO, Tabla 4, p. 16',
     question: 'Dificultades de acceso a la atención hospitalaria', options: yesNo(2) },
-  { id: 'limited_knowledge', dimension: 'social', modelVariable: 'Nivel de conocimiento sobre la enfermedad', source: 'M Tabla 4, p. 16',
+  { id: 'limited_knowledge', dimension: 'social', modelVariable: 'Nivel de conocimiento sobre la enfermedad', source: 'Modelo CMO, Tabla 4, p. 16',
     question: 'Conocimiento limitado sobre su condición', options: yesNo(3) },
-  { id: 'transition', dimension: 'social', modelVariable: 'Transición al régimen de paciente adulto', source: 'M Tabla 4, p. 16',
-    question: 'En proceso de transición del régimen pediátrico al de adulto', options: yesNo(4) },
-  { id: 'low_qol', dimension: 'social', modelVariable: 'Calidad de vida', source: 'M Tabla 4, p. 16', outsidePretest: true,
+  { id: 'transition', dimension: 'social', modelVariable: 'Transición al régimen de paciente adulto', source: 'Modelo CMO, Tabla 4, p. 16',
+    question: 'En proceso de transición del régimen pediátrico al de adulto', options: yesNo(4),
+    hint: 'Aplicable a pacientes ya incluidos (≥ 18 años, criterio de inclusión del protocolo p. 9) que siguen en transición desde la consulta pediátrica. No modifica la elegibilidad: el estudio no incluye menores.' },
+  { id: 'low_qol', dimension: 'social', modelVariable: 'Calidad de vida', source: 'Modelo CMO, Tabla 4, p. 16', outsidePretest: true,
     question: 'Baja calidad de vida según cuestionarios validados (SF-36, EQ-5D, Haem-A-QoL…)', options: yesNo(1),
-    hint: 'M no define el umbral de «baja calidad de vida». Variable no incluida en el pretest con el que se fijaron los puntos de corte.' },
+    hint: 'El modelo no define el umbral de «baja calidad de vida». Variable no incluida en el pretest con el que se fijaron los puntos de corte.' },
 ];
 
 export type StratAnswers = Record<string, string | null | undefined>;
@@ -212,11 +234,11 @@ export function computeStratification(diagnosis: Diagnosis, answers: StratAnswer
 
   if (answers.age === 'lt18') {
     return { ...base, status: 'pediatric_model', modelPriority: null, basis: null,
-      warnings: ['Paciente menor de 18 años: M indica usar la «Adaptación del Modelo CMO a Pacientes Crónicos Pediátricos» (y el estudio COAMO solo incluye adultos).'] };
+      warnings: ['Paciente menor de 18 años: el modelo CMO indica usar la «Adaptación del Modelo CMO a Pacientes Crónicos Pediátricos» (y el estudio COAMO solo incluye adultos).'] };
   }
   if (answers.advanced_therapy === 'yes') {
     return { ...base, status: 'determined', modelPriority: 1, basis: 'advanced_therapy',
-      warnings: ['Terapia génica u otra terapia avanzada: Prioridad 1 con independencia de la puntuación (excepción de M p. 17).'] };
+      warnings: ['Terapia génica u otra terapia avanzada: Prioridad 1 con independencia de la puntuación (excepción del modelo, p. 17).'] };
   }
 
   const low = priorityForScore(scoreMin);
@@ -231,13 +253,13 @@ export function computeStratification(diagnosis: Diagnosis, answers: StratAnswer
     return { ...base, status: 'indeterminate', modelPriority: null, basis: null, warnings };
   }
   if (answers.low_qol === 'yes' && priorityForScore(scoreMin - 1) !== low) {
-    warnings.push('El nivel depende del punto de «calidad de vida», variable no incluida en el pretest con el que se fijaron los puntos de corte (M p. 17).');
+    warnings.push('El nivel depende del punto de «calidad de vida», variable no incluida en el pretest con el que se fijaron los puntos de corte (modelo CMO, p. 17).');
   }
   if (score === null) warnings.push(`Faltan ${scoringMissing.length} pregunta(s), pero no pueden cambiar el nivel (intervalo ${scoreMin}-${scoreMax}).`);
   return { ...base, status: 'determined', modelPriority: low, basis: 'score', warnings };
 }
 
-/** Nivel final: el profesional solo puede elevarlo (número menor), con motivo (M p. 19). */
+/** Nivel final: el profesional solo puede elevarlo (número menor), con motivo (modelo CMO, p. 19). */
 export function finalPriority(modelPriority: Priority | null, raisedTo: Priority | null): { priority: Priority | null; raised: boolean; error: string | null } {
   if (raisedTo === null) return { priority: modelPriority, raised: false, error: null };
   if (modelPriority === null) return { priority: null, raised: false, error: 'No se puede elevar un nivel que aún no está determinado.' };
@@ -324,7 +346,7 @@ export function suggestFromClinical(ageAtInclusion: number | null, clinical: Cli
 
   const se = clinical.socioeconomic_status;
   put('socioeconomic', se === 'unfavorable' ? 'yes' : se === 'favorable' ? 'no' : null,
-    'Datos clínicos: situación socioeconómica (M incluye también falta de apoyo familiar o aislamiento)');
+    'Datos clínicos: situación socioeconómica (el modelo incluye también falta de apoyo familiar o aislamiento)');
   const act = clinical.physical_activity;
   put('intense_activity', act === 'intense' ? 'yes' : act === 'sedentary' || act === 'moderate' ? 'no' : null, 'Datos clínicos: actividad física');
   const cv = [bool(clinical.hypertension), obese, bool(clinical.smoking)];

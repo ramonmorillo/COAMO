@@ -12,7 +12,13 @@ type BaseField = {
   label: string;
   source: string; // página del protocolo
   hint?: string;
+  /** Solo se registra en estos diagnósticos; en el resto la columna se guarda vacía (regla de la BD). */
   appliesTo?: Diagnosis[];
+  /**
+   * No se ofrece en estos diagnósticos (formulario condicional, 22/11/2026), pero NO se borra: el guardado omite la
+   * columna, de modo que un valor registrado antes se conserva y se muestra como dato histórico de solo lectura.
+   */
+  hiddenFor?: Diagnosis[];
 };
 
 export type ClinicalField =
@@ -83,15 +89,15 @@ export const CLINICAL_SECTIONS: ClinicalSection[] = [
         hint: 'Episodios de sangrado registrados en el periodo de seguimiento, ajustados a 12 meses.' },
       { key: 'spontaneous_bleeds', label: 'Número de sangrados espontáneos', kind: 'integer', min: 0, source: 'P p. 12' },
       { key: 'traumatic_bleeds', label: 'Número de sangrados traumáticos', kind: 'integer', min: 0, source: 'P p. 12' },
-      { key: 'annualized_joint_bleeding_rate', label: 'Tasa anualizada de sangrados articulares', kind: 'decimal', step: '0.01', min: 0, source: 'P p. 11',
+      { key: 'annualized_joint_bleeding_rate', label: 'Tasa anualizada de sangrados articulares', kind: 'decimal', step: '0.01', min: 0, source: 'P p. 11', hiddenFor: ['EVW'],
         hint: 'Episodios de sangrado articular en el periodo de seguimiento, ajustados a 12 meses.' },
       { key: 'bleeding_severity_last_year', label: 'Gravedad de los sangrados en el último año', kind: 'enum', source: 'P p. 11', options: [
         { value: 'not_applicable', label: 'No aplica' }, { value: 'outpatient', label: 'Manejo ambulatorio' },
         { value: 'hospital_admission', label: 'Ingreso hospitalario' }] },
-      { key: 'hemophilic_arthropathy', label: 'Artropatía hemofílica', kind: 'boolean', source: 'P p. 11' },
-      { key: 'target_joint_present', label: 'Articulación diana', kind: 'boolean', source: 'P p. 11',
+      { key: 'hemophilic_arthropathy', label: 'Artropatía hemofílica', kind: 'boolean', source: 'P p. 11', hiddenFor: ['EVW'], },
+      { key: 'target_joint_present', label: 'Articulación diana', kind: 'boolean', source: 'P p. 11', hiddenFor: ['EVW'],
         hint: '≥3 hemartrosis en la misma articulación en 6 meses consecutivos.' },
-      { key: 'target_joint_detail', label: 'Localización de la articulación diana', kind: 'text', maxLength: 80, requires: 'target_joint_present', source: 'P p. 11',
+      { key: 'target_joint_detail', label: 'Localización de la articulación diana', kind: 'text', maxLength: 80, requires: 'target_joint_present', source: 'P p. 11', hiddenFor: ['EVW'],
         hint: 'Solo la localización (p. ej., «rodilla derecha»). Sin datos identificativos.' },
       { key: 'joint_pain', label: 'Dolor articular', kind: 'enum', source: 'P p. 11', options: [
         { value: 'absent', label: 'Ausente' }, { value: 'mild_moderate', label: 'Leve-moderado' }, { value: 'persistent', label: 'Persistente' }] },
@@ -145,8 +151,21 @@ export const CLINICAL_SECTIONS: ClinicalSection[] = [
 
 export const ALL_CLINICAL_FIELDS: ClinicalField[] = CLINICAL_SECTIONS.flatMap((section) => section.fields);
 
+/** ¿Se ofrece el campo para este diagnóstico? */
 export function fieldApplies(field: ClinicalField, diagnosis: Diagnosis): boolean {
-  return !field.appliesTo || field.appliesTo.includes(diagnosis);
+  return (!field.appliesTo || field.appliesTo.includes(diagnosis)) && !field.hiddenFor?.includes(diagnosis);
+}
+
+/** Campo oculto para el diagnóstico cuyo valor se conserva (no se envía al guardar). */
+export function fieldPreserved(field: ClinicalField, diagnosis: Diagnosis): boolean {
+  return !!field.hiddenFor?.includes(diagnosis);
+}
+
+/** Valores históricos de campos ocultos para el diagnóstico (se muestran en solo lectura; nunca se borran). */
+export function preservedHistoricValues(values: ClinicalValues, diagnosis: Diagnosis): Array<{ field: ClinicalField; value: string | number | boolean }> {
+  return ALL_CLINICAL_FIELDS
+    .filter((f) => fieldPreserved(f, diagnosis) && values[f.key] !== null && values[f.key] !== undefined && values[f.key] !== '')
+    .map((field) => ({ field, value: values[field.key] as string | number | boolean }));
 }
 
 export type ClinicalValues = Record<string, string | number | boolean | null>;
@@ -161,6 +180,7 @@ export function buildClinicalPayload(values: ClinicalValues, diagnosis: Diagnosi
 
   for (const field of ALL_CLINICAL_FIELDS) {
     const raw = values[field.key];
+    if (fieldPreserved(field, diagnosis)) continue; // ni se envía ni se borra: conserva lo registrado
     if (!fieldApplies(field, diagnosis)) {
       payload[field.key] = null;
       continue;
@@ -199,7 +219,7 @@ export function buildClinicalPayload(values: ClinicalValues, diagnosis: Diagnosi
   }
 
   for (const field of ALL_CLINICAL_FIELDS) {
-    if (field.kind === 'text' && field.requires && payload[field.key] !== null && payload[field.requires] !== true) {
+    if (field.kind === 'text' && field.requires && field.key in payload && payload[field.key] !== null && payload[field.requires] !== true) {
       payload[field.key] = null;
     }
   }
