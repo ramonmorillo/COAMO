@@ -9,15 +9,16 @@ import { INSTRUMENTS, INSTRUMENT_CODES, type InstrumentCode } from '../../domain
 import type { IexpacScores, VeritasScores } from '../../domain/questionnaires/scoring';
 import { formatScore } from '../../domain/questionnaires/scoring';
 import { formatDate } from '../../domain/study';
+import { INSTRUMENT_LIBRARY } from '../../constants/documents';
 import { listAdministrationsForVisits } from '../../services/questionnaireService';
 import type { Visit } from '../../services/patientService';
 import { Notice } from '../ui/Notice';
 import { StatusBadge } from '../ui/StatusBadge';
 
-type Props = { patientId: string; visits: Visit[] };
+type Props = { patientId: string; studyCode?: string; visits: Visit[] };
 
 /** Ficha del paciente: «Cuestionarios y resultados comunicados por el paciente» en V0 y VF. */
-export function PatientQuestionnairesCard({ patientId, visits }: Props) {
+export function PatientQuestionnairesCard({ patientId, studyCode, visits }: Props) {
   const studyVisits = visits.filter((v) => (v.visit_type === 'baseline' || v.visit_type === 'final') && v.status !== 'cancelled');
   const byMoment: Partial<Record<StudyVisit, Visit>> = {};
   for (const v of studyVisits) byMoment[studyVisitOf(v.visit_type)!] = v;
@@ -61,6 +62,13 @@ export function PatientQuestionnairesCard({ patientId, visits }: Props) {
         <Link to={`/visits/${visit.id}/questionnaires/${code}`} aria-label={`${INSTRUMENTS[code].shortName} en ${VISIT_LABEL[moment]}`}>
           {status === 'pending' ? 'Registrar' : 'Abrir'}
         </Link>
+        {INSTRUMENT_LIBRARY.find((e) => e.code === code)?.printable && (status === 'pending' || status === 'in_progress') ? (
+          <Link className="coamo-q-cell-detail"
+            to={`/documents/questionnaires/${code}/print?${new URLSearchParams({ ...(studyCode ? { code: studyCode } : {}), visit: moment, date: visit.visit_date }).toString()}`}
+            aria-label={`Hoja en papel de ${INSTRUMENTS[code].shortName} para ${VISIT_LABEL[moment]}`}>
+            Hoja en papel (PDF)
+          </Link>
+        ) : null}
       </div>
     );
   };

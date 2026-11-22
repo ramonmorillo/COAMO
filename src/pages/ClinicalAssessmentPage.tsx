@@ -7,7 +7,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { Notice } from '../components/ui/Notice';
 import { PageHeader } from '../components/ui/PageHeader';
 import {
-  CLINICAL_SECTIONS, buildClinicalPayload, dispensingPercentage, fieldApplies,
+  CLINICAL_SECTIONS, buildClinicalPayload, dispensingPercentage, fieldApplies, preservedHistoricValues,
   type ClinicalField, type ClinicalValues,
 } from '../domain/clinicalSchema';
 import { DIAGNOSIS_LABEL, VISIT_TYPE_LABEL, formatDate } from '../domain/study';
@@ -123,11 +123,22 @@ export function ClinicalAssessmentPage() {
       <form className="page-stack" onSubmit={submit}>
         {CLINICAL_SECTIONS.map((section) => {
           const fields = section.fields.filter((f) => fieldApplies(f, patient.diagnosis));
-          if (fields.length === 0) return null;
+          const historic = preservedHistoricValues(values, patient.diagnosis).filter((h) => section.fields.includes(h.field));
+          if (fields.length === 0 && historic.length === 0) return null;
           return (
             <section key={section.id} className="card" aria-labelledby={`sec-${section.id}`}>
               <h2 id={`sec-${section.id}`}>{section.title}</h2>
               <div className="grid-2" style={{ marginTop: 'var(--sp-3)' }}>{fields.map(renderField)}</div>
+              {historic.length > 0 ? (
+                <Notice tone="info" title="Datos registrados anteriormente (solo lectura)">
+                  Estas variables ya no se recogen para {DIAGNOSIS_LABEL[patient.diagnosis]}. El valor registrado se conserva sin cambios y se exporta:
+                  <ul className="coamo-gap-list">
+                    {historic.map((h) => (
+                      <li key={h.field.key}>{h.field.label}: {typeof h.value === 'boolean' ? (h.value ? 'Sí' : 'No') : String(h.value)}</li>
+                    ))}
+                  </ul>
+                </Notice>
+              ) : null}
               {section.id === 'anthropometry' && typeof values.bmi === 'number' ? (
                 <p className="coamo-field-hint" style={{ marginTop: 'var(--sp-3)' }}>IMC guardado: {String(values.bmi).replace('.', ',')} kg/m²</p>
               ) : null}

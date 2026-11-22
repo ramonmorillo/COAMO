@@ -383,10 +383,10 @@ export const INSTRUMENTS: Record<InstrumentCode, InstrumentDefinition> = {
     options: EVASAF_OPTIONS,
     sections: [{ id: 'items', items: EVASAF_TEXTS.map((text, i) => ({ code: `q${i + 1}`, number: i + 1, text })) }],
     coreItemCodes: range(1, 10),
-    scoringSummary: 'Cada ítem 1 (muy deficiente) – 5 (excelente). Sin puntuación total: ni el documento ni el protocolo definen una regla de agregación.',
-    directionNote: 'En cada ítem, mayor valor = valoración más favorable.',
+    scoringSummary: 'Cada ítem 1 (muy deficiente) – 5 (excelente). Suma descriptiva del estudio (10-50; mayor = mejor atención farmacéutica percibida) solo con los 10 ítems respondidos. No es una puntuación total validada: ni el documento ni el protocolo definen una regla de agregación ni puntos de corte.',
+    directionNote: 'Mayor valor = valoración más favorable de la atención farmacéutica, en cada ítem y en la suma descriptiva (10-50).',
     limitations: [
-      'Sin puntuación resumen aprobada: se analizan los ítems.',
+      'Sin puntuación resumen validada: se analizan los ítems; la suma 10-50 es solo descriptiva (no validada, sin puntos de corte).',
       'El ítem 2 contiene dos afirmaciones en el documento; se reproduce tal cual.',
       'Errata «Marque con na X» del documento de 14/10/2026, corregida en el documento actualizado (31/10/2026) a «una X».',
       'Comentarios: texto libre opcional, no puntúa; registros anteriores al 03/11/2026 sin el apartado (vacío = no recogido).',

@@ -4,10 +4,10 @@ import { join } from 'node:path';
 import * as XLSX from 'xlsx';
 import { describe, expect, it } from 'vitest';
 
-import { buildExportBundle, readAllTables, runResearchExport, type ExportOptions } from '../src/services/researchExport/bundle';
-import { parseCsv, SPANISH_EXCEL_DIALECT, STANDARD_DIALECT, writeCsv, type CsvDialect } from '../src/services/researchExport/csv';
+import { buildExportBundle, readAllTables, runResearchExport, WORKBOOK_INDEX, type ExportOptions } from '../src/services/researchExport/bundle';
+import { guardCsvText, parseCsv, SPANISH_EXCEL_DIALECT, STANDARD_DIALECT, unguardCsvText, writeCsv, type CsvDialect } from '../src/services/researchExport/csv';
 import { TABLE_REQUESTS, type RawData } from '../src/services/researchExport/datasets';
-import { ExportIntegrityError, readWholeTable } from '../src/services/researchExport/reader';
+import { ExportIntegrityError, MissingColumnError, readWholeTable } from '../src/services/researchExport/reader';
 import { escapeForSpss, unescapeFromSpss } from '../src/services/researchExport/spss';
 import { readZip } from '../src/services/researchExport/zip';
 import { memorySource, syntheticData, TRICKY_TEXTS } from './helpers/exportFixture';
@@ -36,8 +36,26 @@ function decode(cell: string, sourceValue: unknown, dialect: CsvDialect): unknow
   if (typeof sourceValue === 'number') return Number(dialect.decimal === ',' ? cell.replace(',', '.') : cell);
   if (typeof sourceValue === 'boolean') return cell === '1';
   if (sourceValue !== null && typeof sourceValue === 'object') return JSON.parse(cell);
-  return cell;
+  return unguardCsvText(cell, dialect);
 }
+
+describe('protección frente a inyección de fórmulas (dialecto Excel España)', () => {
+  it('antepone apóstrofo a textos que empiezan por = + - @ tab o CR (y a los que ya empiezan por apóstrofo); es reversible', () => {
+    for (const t of ['=SUMA(A1:A2)', '+34 600', '-dosis', '@cmd', '\tx', "'ya", '=HYPERLINK("http://x")']) {
+      expect(guardCsvText(t, SPANISH_EXCEL_DIALECT)).toBe(`'${t}`);
+      expect(unguardCsvText(guardCsvText(t, SPANISH_EXCEL_DIALECT), SPANISH_EXCEL_DIALECT)).toBe(t);
+      expect(guardCsvText(t, STANDARD_DIALECT)).toBe(t); // SPSS/R: valor exacto
+    }
+    for (const t of ['Factor VIII', '007', '2026-01-15', 'rodilla']) expect(guardCsvText(t, SPANISH_EXCEL_DIALECT)).toBe(t);
+  });
+  it('no afecta a números negativos ni a fechas (solo columnas de texto)', async () => {
+    const { serializeCell } = await import('../src/services/researchExport/spec');
+    expect(serializeCell(-1.5, 'decimal', SPANISH_EXCEL_DIALECT)).toBe('-1,5');
+    expect(serializeCell('2026-01-15', 'date', SPANISH_EXCEL_DIALECT)).toBe('2026-01-15');
+    expect(serializeCell('=1+1', 'string', SPANISH_EXCEL_DIALECT)).toBe("'=1+1");
+    expect(serializeCell('=1+1', 'string', STANDARD_DIALECT)).toBe('=1+1');
+  });
+});
 
 describe('CSV RFC 4180', () => {
   it('conserva exactamente textos difíciles (separadores, comillas, saltos de línea, ñ, emoji, espacios, ceros)', () => {
@@ -310,5 +328,134 @@ describe('Paquete de exportación COAMO (datos sintéticos)', () => {
         writeFileSync(target, content);
       }
     }
+  });
+});
+
+// ── Fase 8.3: exportación → reimportación con planificación de actuaciones, evolución e integridad referencial ──
+type Row = Record<string, unknown>;
+
+function withPlanning(base: RawData): { data: RawData; originId: string; resolutionId: string } {
+  const data: RawData = JSON.parse(JSON.stringify(base));
+  const visits = data.visits as Array<Record<string, unknown>>;
+  const interventions = data.interventions as Array<Record<string, unknown>>;
+  for (const r of interventions) { r.planned_date = null; r.origin_intervention_id = null; }
+  (data.clinical as Array<Record<string, unknown>>)[0].hemostatic_agent = '=SUMA(A1:A2)'; // intento de fórmula en un texto libre
+  const origin = interventions.find((r) => {
+    if (r.status !== 'planned') return false;
+    const v = visits.find((x) => x.id === r.visit_id)!;
+    return visits.some((x) => x.patient_id === v.patient_id && x.status === 'completed' && String(x.visit_date) > String(v.visit_date));
+  })!;
+  const v1 = visits.find((x) => x.id === origin.visit_id)!;
+  const v2 = visits.filter((x) => x.patient_id === v1.patient_id && x.status === 'completed' && String(x.visit_date) > String(v1.visit_date))
+    .sort((a, b) => String(a.visit_date).localeCompare(String(b.visit_date)))[0];
+  origin.planned_date = v1.visit_date;
+  const resolutionId = 'eeeeeeee-0000-4000-8000-000000000001';
+  interventions.push({ ...origin, id: resolutionId, visit_id: v2.id, status: 'performed', performed_date: v2.visit_date, origin_intervention_id: origin.id, revision: 1,
+    catalog_code: null, custom_text: 'Realización sintética de la prevista', domain: 'care_coordination' });
+  return { data, originId: origin.id as string, resolutionId };
+}
+
+describe('Exportación completa (fase 8.3): reimportación, relaciones y ausencia de duplicados', () => {
+  const { data, originId, resolutionId } = withPlanning(syntheticData({ patients: 40 }));
+
+  it('actuaciones: fecha prevista, vínculo con la visita de origen y estado de seguimiento; sin duplicados', async () => {
+    const { table } = await exportAll(data);
+    const rows = table('raw/actuaciones.csv');
+    expect(rows).toHaveLength(data.interventions.length);
+    expect(new Set(rows.map((r) => r.id)).size).toBe(rows.length);
+    const origin = rows.find((r) => r.id === originId)!;
+    const resolution = rows.find((r) => r.id === resolutionId)!;
+    expect(origin.status).toBe('planned'); // el registro de origen se exporta tal cual (no se reescribe)
+    expect(origin.planned_date).not.toBe('');
+    expect(origin.estado_seguimiento).toBe('performed_later');
+    expect(origin.realizada_en_registro_id).toBe(resolutionId);
+    expect(resolution.origin_intervention_id).toBe(originId);
+    expect(resolution.estado_seguimiento).toBe('performed_same_visit');
+    // Integridad referencial: toda actuación apunta a una visita exportada y todo origen a una actuación exportada.
+    const visitIds = new Set(table('raw/visitas.csv').map((v) => v.id));
+    const ids = new Set(rows.map((r) => r.id));
+    for (const r of rows) {
+      expect(visitIds.has(r.visit_id), r.id).toBe(true);
+      if (r.origin_intervention_id) expect(ids.has(r.origin_intervention_id)).toBe(true);
+    }
+  });
+
+  it('evolución: una fila por visita × indicador con registro; diferencia solo con basal de la misma versión; dirección correcta', async () => {
+    const { table } = await exportAll(data);
+    const rows = table('analisis/evolucion.csv');
+    const keys = rows.map((r) => `${r.visit_id}|${r.indicador}`);
+    expect(new Set(keys).size).toBe(rows.length);
+    const expectedQ = data.questionnaires.filter((q) => (data.visits as Row[]).find((v) => v.id === q.visit_id)?.status !== 'cancelled').length;
+    const expectedS = data.stratifications.filter((s) => (data.visits as Row[]).find((v) => v.id === s.visit_id)?.status !== 'cancelled').length;
+    expect(rows.filter((r) => r.instrumento !== '')).toHaveLength(expectedQ);
+    expect(rows.filter((r) => r.indicador === 'cmo_puntuacion')).toHaveLength(expectedS);
+    for (const r of rows) {
+      if (r.diferencia_basal !== '') {
+        expect(Number(r.diferencia_basal)).toBeCloseTo(Number(r.valor) - Number(r.valor_basal), 4);
+      }
+      if (r.valor === '') expect(r.motivo_ausencia).not.toBe('');
+      if (r.indicador === 'vprn_total' || r.indicador === 'vpro_total') expect(r.direccion).toBe('menor_mejor');
+      if (r.indicador === 'evasaf_suma_descriptiva' && r.valor !== '') expect(Number(r.valor)).toBeGreaterThanOrEqual(10);
+    }
+    // Coherencia con la BD: el valor VERITAS exportado es el total guardado por la BD.
+    for (const q of data.questionnaires.filter((x) => x.instrument_code === 'VERITAS_PRN' && x.status === 'completed')) {
+      const row = rows.find((r) => r.visit_id === q.visit_id && r.indicador === 'vprn_total');
+      const total = (q.scores as { total?: number | null }).total ?? null;
+      expect(row?.valor === '' ? null : Number(row?.valor)).toBe(total);
+    }
+  });
+
+  it('Excel: índice de bloques, hojas de evolución y actuaciones con todas las filas; textos sin apóstrofo de protección', async () => {
+    const { files } = await exportAll(data, SPANISH_EXCEL_DIALECT);
+    const wb = XLSX.read(files.get('coamo_export.xlsx')!, { type: 'array' });
+    expect(wb.SheetNames.slice(0, 3)).toEqual(['metadatos', 'indice', 'diccionario']);
+    for (const sheet of ['evolucion', 'actuaciones', 'pacientes', 'visitas', 'estratificaciones', 'cuestionarios_registros']) expect(wb.SheetNames).toContain(sheet);
+    const indice = XLSX.utils.sheet_to_json<Record<string, string>>(wb.Sheets.indice);
+    expect(indice.map((r) => r.bloque)).toEqual(WORKBOOK_INDEX.map((r) => r[0]));
+    const act = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.actuaciones);
+    expect(act).toHaveLength(data.interventions.length);
+    const pacientes = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.pacientes);
+    expect(pacientes).toHaveLength(data.patients.length);
+    const visitas = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.visitas);
+    expect(visitas).toHaveLength(data.visits.length);
+    const tricky = (data.clinical as Row[]).find((r) => typeof r.hemostatic_agent === 'string' && String(r.hemostatic_agent).startsWith('='));
+    expect(tricky).toBeDefined();
+    {
+      const clin = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.datos_clinicos);
+      const cell = wb.Sheets.datos_clinicos;
+      expect(clin.find((r) => r.visit_id === tricky!.visit_id)?.hemostatic_agent).toBe(tricky!.hemostatic_agent);
+      expect(Object.values(cell).some((c) => typeof c === 'object' && c !== null && 'f' in (c as object))).toBe(false); // ninguna fórmula
+    }
+  });
+
+  it('cero registros: exportación válida con cabeceras y sin filas', async () => {
+    const empty: RawData = Object.fromEntries(Object.keys(data).map((k) => [k, []])) as unknown as RawData;
+    const { table, bundle } = await exportAll(empty);
+    expect(table('raw/actuaciones.csv')).toHaveLength(0);
+    expect(table('analisis/evolucion.csv')).toHaveLength(0);
+    expect(bundle.manifest.scope.patients).toBe(0);
+  });
+
+  it('BD sin la migración de planificación: se exporta igual, con aviso y columnas vacías (nunca se oculta un error de permisos)', async () => {
+    const base = memorySource(data);
+    const legacy = {
+      count: base.count,
+      async page(request: Parameters<typeof base.page>[0], from: number, to: number) {
+        if (request.table === 'coag_interventions' && request.columns.includes('planned_date')) throw new MissingColumnError('column coag_interventions.planned_date does not exist');
+        return base.page(request, from, to);
+      },
+    };
+    const bundle = await runResearchExport(legacy, options(STANDARD_DIALECT));
+    expect(bundle.manifest.warnings.join(' ')).toMatch(/migración pendiente/);
+    const files = new Map(readZip(bundle.zip).map((e) => [e.path, e.data]));
+    const [header, ...rows] = parseCsv(new TextDecoder().decode(files.get('raw/actuaciones.csv')!), ',');
+    expect(rows).toHaveLength(data.interventions.length);
+    expect(rows.every((r) => r[header.indexOf('planned_date')] === '')).toBe(true);
+    // Un error que no es de columna (p. ej., permisos) cancela la exportación.
+    const denied = { count: base.count, async page(request: Parameters<typeof base.page>[0], from: number, to: number) {
+      if (request.table === 'coag_interventions') throw new Error('permission denied for table coag_interventions');
+      return base.page(request, from, to);
+    } };
+    await expect(runResearchExport(denied, options(STANDARD_DIALECT))).rejects.toThrow(/permission denied/);
   });
 });

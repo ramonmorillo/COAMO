@@ -10,7 +10,7 @@ import {
   DATA_SOURCE_LABEL, effectiveStatus, REASON_LABEL, STATUS_LABEL, STATUS_TONE, studyVisitOf, VISIT_LABEL,
   type QuestionnaireAdministration, type StudyVisit,
 } from '../domain/questionnaires/administration';
-import { CHANGE_LABEL, compareInstrument, type ComparisonMetric, type InstrumentComparison } from '../domain/questionnaires/comparison';
+import { CHANGE_LABEL, compareInstrument, type InstrumentComparison } from '../domain/questionnaires/comparison';
 import { ADMINISTRATION_MODE_LABEL, INSTRUMENTS, INSTRUMENT_CODES, type InstrumentCode } from '../domain/questionnaires/instruments';
 import { formatScore, isComplete, veritasItemScore } from '../domain/questionnaires/scoring';
 import { DIAGNOSIS_LABEL, formatDate, todayIso } from '../domain/study';
@@ -19,6 +19,8 @@ import { listEvolutionsForVisits } from '../services/evolutionService';
 import { listInterventionsForVisits } from '../services/interventionService';
 import { DOMAIN_LABEL, DOMAIN_ORDER, performedInterventions, type InterventionRecord } from '../domain/interventions';
 import { listStratificationsForVisits, type StratificationRecord } from '../services/stratificationService';
+import { InstrumentTrendChart } from '../components/questionnaires/InstrumentTrendChart';
+import { buildSeries, SERIES_SPECS } from '../domain/questionnaires/evolutionSeries';
 import { categoricalRow, clinicalRows, numericRow, stratificationRows, type LongitudinalRow } from '../domain/longitudinal';
 import type { ClinicalValues } from '../domain/clinicalSchema';
 import { getClinicalAssessment, getPatient, listVisits, type Patient, type Visit } from '../services/patientService';
@@ -34,6 +36,7 @@ export function QuestionnaireEvolutionPage() {
   const [strata, setStrata] = useState<StratificationRecord[]>([]);
   const [evolutionCount, setEvolutionCount] = useState<number | null>(null);
   const [interventions, setInterventions] = useState<InterventionRecord[] | null>(null);
+  const [chartCode, setChartCode] = useState<InstrumentCode | 'all'>('all');
 
   useEffect(() => {
     void (async () => {
@@ -84,12 +87,13 @@ export function QuestionnaireEvolutionPage() {
     numericRow('Cuestionarios', 'IEXPAC global (0-10; mayor = mejor experiencia) · variable principal', metricOf('IEXPAC', 'global')?.v0 ?? null, metricOf('IEXPAC', 'global')?.vf ?? null, { decimals: 2, higherIsBetter: true }),
     numericRow('Cuestionarios', 'EQ-5D-3L EVA (0-100; mayor = mejor salud percibida)', metricOf('EQ5D3L', 'vas')?.v0 ?? null, metricOf('EQ5D3L', 'vas')?.vf ?? null, { higherIsBetter: true }),
     categoricalRow('Cuestionarios', 'EQ-5D-3L perfil (5 dígitos)', profile(find('V0', 'EQ5D3L')), profile(find('VF', 'EQ5D3L'))),
+    numericRow('Cuestionarios', 'EVASAF suma descriptiva (10-50; mayor = mejor atención percibida; no validada)', metricOf('EVASAF', 'descriptive_sum')?.v0 ?? null, metricOf('EVASAF', 'descriptive_sum')?.vf ?? null, { higherIsBetter: true }),
     numericRow('Cuestionarios', 'VERITAS-PRN total (24-120; menor = mayor adherencia)', metricOf('VERITAS_PRN', 'total')?.v0 ?? null, metricOf('VERITAS_PRN', 'total')?.vf ?? null, { higherIsBetter: false }),
     numericRow('Cuestionarios', 'VERITAS-Pro total (24-120; menor = mayor adherencia)', metricOf('VERITAS_PRO', 'total')?.v0 ?? null, metricOf('VERITAS_PRO', 'total')?.vf ?? null, { higherIsBetter: false }),
   ];
   const longitudinal: LongitudinalRow[] = [...stratificationRows(strataAt('V0'), strataAt('VF')), ...qRows, ...clinicalRows(clinical.V0 ?? null, clinical.VF ?? null)];
   const iexpac = comparisons[0].cmp.metrics.find((m) => m.key === 'global')!;
-  const vas = comparisons[1].cmp.metrics.find((m) => m.key === 'vas')!;
+  const seriesVisits = (['V0', 'VF'] as const).filter((m) => visits[m]).map((m) => ({ id: visits[m]!.id, visit_date: visits[m]!.visit_date, label: m }));
 
   return (
     <div className="page-stack coamo-report">
@@ -157,12 +161,24 @@ export function QuestionnaireEvolutionPage() {
       </section>
 
       <section className="card" aria-labelledby="evo-charts">
-        <h2 id="evo-charts">Comparación gráfica</h2>
-        <div className="grid-2">
-          <PairChart title="IEXPAC global" metric={iexpac} max={10} />
-          <PairChart title="EQ-5D-3L · EVA" metric={vas} max={100} />
+        <h2 id="evo-charts">Evolución gráfica por instrumento</h2>
+        <div className="coamo-no-print" style={{ display: 'inline-grid', gap: '0.25rem', marginBottom: 'var(--sp-3)' }}>
+          <label htmlFor="evo-chart-instrument">Instrumento del gráfico</label>
+          <select id="evo-chart-instrument" value={chartCode} onChange={(e) => setChartCode(e.target.value as InstrumentCode | 'all')}>
+            <option value="all">Todos (un gráfico por instrumento)</option>
+            {SERIES_SPECS.map((sp) => <option key={sp.code} value={sp.code}>{sp.label}</option>)}
+          </select>
         </div>
-        <p className="coamo-field-hint">Un gráfico por escala (unidades distintas). Los valores exactos figuran en las tablas de cada instrumento.</p>
+        <div className="coamo-trend-list">
+          {SERIES_SPECS.filter((sp) => chartCode === 'all' || sp.code === chartCode).map((sp) => (
+            <InstrumentTrendChart key={sp.code} series={buildSeries(sp.code, admins, seriesVisits)} />
+          ))}
+        </div>
+        <p className="coamo-field-hint">
+          Un gráfico por instrumento con su propia escala (no se mezclan escalas). Eje temporal: fecha real de administración. Solo se dibujan mediciones
+          completas; las visitas sin dato se marcan con un aspa en el eje y no se interpolan. Las flechas indican si mejorar es aumentar (↑) o disminuir (↓).
+          Los cambios son individuales y descriptivos: no hay umbrales de relevancia clínica documentados.
+        </p>
       </section>
 
       {comparisons.map(({ code, v0, vf, cmp }) => (
@@ -186,29 +202,6 @@ function Metric({ label, value, hint }: { label: string; value: string; hint?: s
   );
 }
 
-/** Dos barras (V0, VF) de una misma escala, con etiqueta directa del valor. Ausente = sin barra. */
-function PairChart({ title, metric, max }: { title: string; metric: ComparisonMetric; max: number }) {
-  return (
-    <figure className="coamo-pair-chart">
-      <figcaption className="text-strong">{title} <span className="text-muted">(0-{max})</span></figcaption>
-      <ul className="bar-list">
-        {(['V0', 'VF'] as const).map((m) => {
-          const value = m === 'V0' ? metric.v0 : metric.vf;
-          return (
-            <li key={m} title={`${title} ${m}: ${value === null ? 'sin dato' : formatScore(value)}`}>
-              <span className="bar-list-label">{m}</span>
-              <span className="bar-list-track">
-                {value !== null ? <span className="bar-list-fill" style={{ width: `${Math.max((value / max) * 100, 1)}%` }} /> : null}
-              </span>
-              <span className="bar-list-value">{value === null ? '—' : formatScore(value, max === 100 ? 0 : 2)}</span>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="coamo-field-hint">{metric.delta === null ? 'Δ no calculable' : `Δ VF − V0: ${signed(metric.delta)}`}</p>
-    </figure>
-  );
-}
 
 function AdminFacts({ admin, moment, code, visitId }: { admin: QuestionnaireAdministration | null; moment: StudyVisit; code: InstrumentCode; visitId?: string }) {
   const status = effectiveStatus(admin);

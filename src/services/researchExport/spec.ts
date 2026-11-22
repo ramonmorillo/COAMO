@@ -1,7 +1,7 @@
 // Definición única de las variables exportadas. De aquí salen las cabeceras (fijas), el diccionario
 // de datos, la sintaxis SPSS y el tipo de cada celda en Excel: una sola fuente de verdad.
 
-import type { CsvCell, CsvDialect } from './csv';
+import { guardCsvText, type CsvCell, type CsvDialect } from './csv';
 
 export type ColumnType =
   | 'string' // texto libre o código
@@ -95,6 +95,6 @@ export function serializeCell(value: unknown, type: ColumnType, dialect: CsvDial
       return JSON.stringify(value);
     case 'string':
     default:
-      return typeof value === 'string' ? value : JSON.stringify(value);
+      return guardCsvText(typeof value === 'string' ? value : JSON.stringify(value), dialect);
   }
 }

@@ -239,7 +239,7 @@ export function StratificationPage() {
           {result.modelPriority && result.modelPriority > 1 ? (
             <div className="grid-2" style={{ marginTop: 'var(--sp-3)' }}>
               <label>
-                Elevar el nivel por criterio profesional (M p. 19)
+                Elevar el nivel por criterio profesional (modelo CMO, p. 19)
                 <select value={draft.raisedTo ?? ''} onChange={(e) => update({ raisedTo: e.target.value ? (Number(e.target.value) as Priority) : null })}>
                   <option value="">No elevar</option>
                   {([1, 2] as Priority[]).filter((p) => p < result.modelPriority!).map((p) => <option key={p} value={p}>Prioridad {p}</option>)}
@@ -264,7 +264,7 @@ export function StratificationPage() {
 
           {final.priority ? (
             <Notice tone="success" title={`Nivel asignado: Prioridad ${final.priority}${final.raised ? ` (elevado desde Prioridad ${result.modelPriority})` : ''}`}>
-              Periodicidad de valoración: {followUpFor(final.priority)}. Las actuaciones de AF son acumulativas (M p. 18).
+              Periodicidad de valoración: {followUpFor(final.priority)}. Las actuaciones de AF son acumulativas (modelo CMO, p. 18).
             </Notice>
           ) : null}
         </section>

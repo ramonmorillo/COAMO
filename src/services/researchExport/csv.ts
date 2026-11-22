@@ -7,10 +7,29 @@ export type CsvDialect = {
   delimiter: ',' | ';';
   /** Separador decimal de los números. '.' (estándar) o ',' (configuración regional española). */
   decimal: '.' | ',';
+  /**
+   * Protección frente a inyección de fórmulas al abrir el CSV con una hoja de cálculo (OWASP «CSV injection»): en las
+   * columnas de TEXTO, un valor que empieza por = + - @ tabulador o retorno se escribe precedido de un apóstrofo. Para
+   * que sea reversible sin ambigüedad, también se antepone a los textos que ya empiezan por apóstrofo. Solo en el
+   * dialecto pensado para Excel; el estándar (SPSS, R, Stata) conserva el valor exacto. Números y fechas no cambian.
+   */
+  formulaGuard?: boolean;
 };
 
 export const STANDARD_DIALECT: CsvDialect = { delimiter: ',', decimal: '.' };
-export const SPANISH_EXCEL_DIALECT: CsvDialect = { delimiter: ';', decimal: ',' };
+export const SPANISH_EXCEL_DIALECT: CsvDialect = { delimiter: ';', decimal: ',', formulaGuard: true };
+
+const FORMULA_TRIGGER = /^['=+\-@\t\r]/;
+
+/** Aplica la protección de fórmulas a un texto (si el dialecto la usa). */
+export function guardCsvText(value: string, dialect: CsvDialect): string {
+  return dialect.formulaGuard && FORMULA_TRIGGER.test(value) ? `'${value}` : value;
+}
+
+/** Inversa exacta de guardCsvText (reimportación y verificación). */
+export function unguardCsvText(value: string, dialect: CsvDialect): string {
+  return dialect.formulaGuard && value.startsWith("'") ? value.slice(1) : value;
+}
 
 /** Celda ya serializada: null = vacío (dato ausente). Nunca se convierte un vacío en 0. */
 export type CsvCell = string | null;

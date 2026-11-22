@@ -39,6 +39,7 @@ const db = {
   coag_audit_log: [],
 };
 let failNextEvolutionWrite = false;
+let legacyInterventions = false; // BD sin la migración 20261122120000 (columnas planned_date/origin ausentes)
 const REV_PRO = [6, 7, 11, 13, 14, 16, 17, 18, 19, 20, 23];
 function filterRows(rows, params) {
   return rows.filter(row => [...params].every(([k, v]) => {
@@ -57,6 +58,9 @@ async function handle(route) {
   if (url.pathname.startsWith('/auth/v1/user')) return route.fulfill({ json: { id: UID, email: 'i@test', aud: 'authenticated', role: 'authenticated' } });
   if (url.pathname.startsWith('/auth/')) return route.fulfill({ json: {} });
   const table = url.pathname.replace('/rest/v1/', '');
+  if (legacyInterventions && table === 'coag_interventions' && /planned_date|origin_intervention_id/.test(url.searchParams.get('select') || '')) {
+    return route.fulfill({ status: 400, json: { code: '42703', message: 'column coag_interventions.planned_date does not exist' } });
+  }
   const rows = db[table] || (db[table] = []);
   const one = (req.headers()['accept'] || '').includes('vnd.pgrst.object');
   let out;
@@ -102,9 +106,50 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   await page.locator('li[data-code="SFT-01"]').getByRole('button', { name: 'Registrar como realizada' }).click();
   await page.getByText('Actuación registrada como realizada.').waitFor();
   ok(db.coag_interventions.length === 1 && db.coag_interventions[0].status === 'performed' && db.coag_interventions[0].performed_date === '2026-01-15', 'registro real: realizada con la fecha de la visita');
-  await page.locator('li[data-code="EDU-08"]').getByRole('button', { name: 'Prever' }).click();
-  await page.getByText('Actuación registrada como prevista.').waitFor();
-  ok(db.coag_interventions[1].status === 'planned' && db.coag_interventions[1].performed_date === null, 'prevista sin fecha de realización');
+  const edu = page.locator('li[data-code="EDU-08"]');
+  ok(await edu.getByRole('button', { name: 'Prever' }).isDisabled(), 'prever exige fecha prevista');
+  ok((await edu.getByLabel('Fecha de realización de EDU-08').getAttribute('max')) !== null, 'fecha de realización con máximo = hoy (no futura)');
+  await edu.getByLabel('Fecha prevista de EDU-08').fill('2026-03-01');
+  await edu.getByRole('button', { name: 'Prever' }).click();
+  await page.getByText('Actuación registrada como prevista para el 01/03/2026.').waitFor();
+  ok(db.coag_interventions[1].status === 'planned' && db.coag_interventions[1].performed_date === null && db.coag_interventions[1].planned_date === '2026-03-01', 'prevista con fecha prevista y sin fecha de realización');
+  ok(await edu.getByText(/Pendiente \(fecha prevista superada\)|Pendiente/).first().isVisible(), 'la prevista aparece como pendiente, no como realizada');
+
+  // ── Continuidad entre visitas (secuencia de trazabilidad) ──
+  db.coag_visits.push({ id: 'v1', patient_id: 'p1', visit_type: 'followup', visit_date: '2026-06-15', status: 'completed', modality: 'phone', is_scheduled: true });
+  const originBefore = JSON.stringify(db.coag_interventions[1]);
+  await page.goto(`${base}/visits/v1/interventions`);
+  await page.getByText(/Visita de seguimiento del 15\/06\/2026/).first().waitFor({ timeout: 15000 });
+  await page.getByRole('heading', { name: 'Actuaciones pendientes de visitas anteriores' }).waitFor({ timeout: 15000 });
+  const pendingRow = page.locator('li[data-pending]');
+  ok(await pendingRow.count() === 1 && (await pendingRow.textContent()).includes('prevista en la Visita basal del 15/01/2026') && (await pendingRow.textContent()).includes('01/03/2026'),
+    'visita 2: la prevista de la visita 1 aparece como pendiente con su visita de origen y fecha prevista');
+  ok(await page.locator('li[data-code="EDU-08"]').getByText('Sin registrar').isVisible(), 'visita 2: no se copia ni duplica la actuación anterior');
+  await pendingRow.getByRole('button', { name: 'Documentar realización en esta visita' }).click();
+  await page.getByText(/Realización documentada en esta visita/).waitFor();
+  const done = db.coag_interventions[2];
+  ok(db.coag_interventions.length === 3 && done.visit_id === 'v1' && done.origin_intervention_id === db.coag_interventions[1].id && done.status === 'performed' && done.performed_date === '2026-06-15',
+    'visita 2: realización documentada como registro nuevo de la visita 2 vinculado a la prevista');
+  ok(JSON.stringify(db.coag_interventions[1]) === originBefore, 'visita 1: el registro previsto no se ha modificado');
+  ok(await page.locator('li[data-pending]').count() === 0, 'visita 2: ya no figura como pendiente');
+  await page.goto(`${base}/visits/v0/interventions`);
+  await page.getByText(/Visita basal del 15\/01\/2026/).first().waitFor({ timeout: 15000 });
+  const eduV0 = page.locator('li[data-code="EDU-08"]');
+  await eduV0.waitFor({ timeout: 15000 });
+  const eduText = await eduV0.textContent();
+  ok(eduText.includes('prevista para el 01/03/2026') && eduText.includes('documentada en la Visita de seguimiento del 15/06/2026'),
+    'visita 1: conserva la fecha prevista y muestra dónde se documentó la realización');
+  ok(await eduV0.getByRole('button', { name: 'Marcar como realizada' }).count() === 0 && await eduV0.getByRole('button', { name: 'Anular registro' }).count() === 0,
+    'visita 1: no se puede volver a realizar ni anular (sin duplicación)');
+
+  // BD sin la migración: la página sigue cargando y avisa; «Prever» funciona como antes (sin fecha prevista).
+  legacyInterventions = true;
+  await page.reload();
+  await page.getByText('Planificación de actuaciones no disponible todavía').waitFor({ timeout: 15000 });
+  ok(await page.locator('li[data-code="SFT-01"]').isVisible() && await page.getByRole('heading', { name: 'Actuaciones pendientes de visitas anteriores' }).count() === 0,
+    'sin migración: la página carga, avisa y oculta el seguimiento entre visitas');
+  ok(await page.locator('li[data-code="COO-01"]').getByRole('button', { name: 'Prever' }).isEnabled(), 'sin migración: «Prever» sigue disponible como antes');
+  legacyInterventions = false;
 
   // ── Evolución farmacéutica ──
   await page.goto(`${base}/patients/p1`);

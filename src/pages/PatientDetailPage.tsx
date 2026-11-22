@@ -85,7 +85,7 @@ export function PatientDetailPage() {
           <ScheduleCard schedule={schedule} />
           <VisitsCard patient={patient} visits={visits} onChanged={load} />
           <Suspense fallback={<LoadingState label="Cargando cuestionarios..." />}>
-            <PatientQuestionnairesCard patientId={patient.id} visits={visits} />
+            <PatientQuestionnairesCard patientId={patient.id} studyCode={patient.study_code} visits={visits} />
           </Suspense>
         </>
       ) : null}

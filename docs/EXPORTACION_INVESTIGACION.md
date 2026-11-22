@@ -28,6 +28,13 @@ Ausente = celda vacía (nunca 0 ni −999). Las puntuaciones son las guardadas p
   (pp. 10-12), estratificación, cuestionarios e ítems IEXPAC; cambios `iexpac_global_cambio_vf_v0` (variable principal),
   `eq5d_eva_cambio_vf_v0`, `cmo_puntuacion_cambio_vf_v0`, `vprn_total_cambio_vf_v0` y `vpro_total_cambio_vf_v0`
   (VERITAS: negativo = hacia mayor adherencia), **solo en pares completos**. Totales `vprn_total_v0/vf`, `vpro_total_v0/vf`.
+- `analisis/evolucion` (22/11/2026): una fila por visita × indicador (IEXPAC global, EQ-5D EVA, EVASAF suma descriptiva,
+  VERITAS-PRN/Pro total, puntuación y prioridad CMO) con fecha de observación, versión del instrumento/cálculo, dirección de
+  interpretación, motivo de ausencia y diferencia frente a la basal **solo con la misma versión**.
+- `raw/actuaciones` incluye `planned_date`, `origin_intervention_id`, `estado_seguimiento` y `realizada_en_registro_id`
+  (vacías hasta aplicar la migración `db/pending/20261122120000_coag_interventions_planning.sql`; la exportación avisa).
+- Excel: hoja `indice` (bloques Pacientes, Visitas, Estratificación, Actuaciones, Cuestionarios, Evolución, Diccionario) y
+  `stratification_rules` en metadatos. Formato «Excel España»: apóstrofo reversible ante textos que empiezan por = + - @.
 - `analisis/cuestionarios_items`: una fila por ítem (código de respuesta, aplicabilidad de los condicionados IEXPAC y
   `puntos` del ítem según la clave VERITAS, calculados por la BD con `coamo-q-2`).
 - `analisis/estratificaciones_respuestas`: una fila por pregunta del modelo (respuesta, puntos del modelo, propuesta desde

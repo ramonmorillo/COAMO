@@ -15,7 +15,15 @@ export type TableRequest = {
   columns: string;
   /** Columna única para ordenar de forma estable. */
   orderBy: string;
+  /**
+   * Columnas a usar si la BD aún no tiene alguna de `columns` (migración pendiente). Solo se usa ante un error de
+   * columna inexistente; cualquier otro error (permisos, red) sigue cancelando la exportación.
+   */
+  fallbackColumns?: string;
 };
+
+/** La BD no tiene alguna columna pedida (PostgreSQL 42703 / PostgREST PGRST204). */
+export class MissingColumnError extends Error {}
 
 export type TableResult<T> = {
   table: string;
@@ -25,6 +33,8 @@ export type TableResult<T> = {
   /** Recuento exacto tras la lectura: si difiere de dbCount, los datos cambiaron durante la exportación. */
   dbCountAfter: number;
   pages: number;
+  /** Se leyó con fallbackColumns porque faltaban columnas en la BD. */
+  usedFallback?: boolean;
 };
 
 /** Abstracción mínima del origen de datos (permite probar con un origen en memoria). */
@@ -41,11 +51,19 @@ export async function readWholeTable<T>(source: DataSource, request: TableReques
   const dbCount = await source.count(request.table);
   const rows: T[] = [];
   let pages = 0;
+  let usedFallback = false;
   for (;;) {
     // El desplazamiento avanza según las filas realmente recibidas: si el servidor aplica un límite
     // menor que el tamaño de página, no se salta ninguna fila.
     const from = rows.length;
-    const page = (await source.page(request, from, from + pageSize - 1)) as T[];
+    let page: T[];
+    try {
+      page = (await source.page(usedFallback ? { ...request, columns: request.fallbackColumns! } : request, from, from + pageSize - 1)) as T[];
+    } catch (error) {
+      if (!(error instanceof MissingColumnError) || !request.fallbackColumns || usedFallback || from !== 0) throw error;
+      usedFallback = true;
+      continue;
+    }
     pages += 1;
     rows.push(...page);
     if (page.length === 0) break;
@@ -73,7 +91,7 @@ export async function readWholeTable<T>(source: DataSource, request: TableReques
     }
     seen.add(value);
   }
-  return { table: request.table, rows, dbCount, dbCountAfter, pages };
+  return { table: request.table, rows, dbCount, dbCountAfter, pages, usedFallback };
 }
 
 export function supabaseDataSource(client: SupabaseClient): DataSource {
@@ -90,6 +108,7 @@ export function supabaseDataSource(client: SupabaseClient): DataSource {
         .select(request.columns)
         .order(request.orderBy, { ascending: true })
         .range(from, to);
+      if (error && (error.code === '42703' || error.code === 'PGRST204')) throw new MissingColumnError(`${request.table}: ${error.message}`);
       if (error) throw new ExportIntegrityError(`Error leyendo ${request.table}: ${error.message}`);
       return (data ?? []) as unknown[];
     },

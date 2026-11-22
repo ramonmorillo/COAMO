@@ -172,6 +172,13 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   await page.getByRole('heading', { name: 'Evolución V0–VF' }).waitFor();
   ok(await page.getByText('IEXPAC VF: pendiente', { exact: false }).count() > 0 || await page.getByText(/IEXPAC · VF: Pendiente/).count() > 0, 'evolución: identifica cuestionarios pendientes');
   ok(await page.getByText('Requiere V0 y VF completos (11 ítems)').isVisible(), 'evolución: sin Δ IEXPAC sin par completo');
+  ok(await page.locator('figure.coamo-trend').count() === 5, 'evolución gráfica: un gráfico por instrumento (5 escalas, sin mezclar)');
+  ok((await page.locator('figure[data-instrument="VERITAS_PRN"] figcaption').textContent()).includes('↓ Menor = mayor adherencia'), 'evolución gráfica: VERITAS con dirección «menor = mayor adherencia»');
+  ok((await page.locator('figure[data-instrument="EVASAF"] figcaption').textContent()).includes('no validada'), 'evolución gráfica: EVASAF identificada como suma descriptiva no validada');
+  await page.locator('section[aria-labelledby="evo-charts"]').screenshot({ path: '' + (process.env.SHOTS || '/tmp') + '/evolution-charts.png' });
+  await page.getByLabel('Instrumento del gráfico').selectOption('EQ5D3L');
+  ok(await page.locator('figure.coamo-trend').count() === 1, 'evolución gráfica: selección por instrumento');
+  await page.getByLabel('Instrumento del gráfico').selectOption('all');
   await page.screenshot({ path: '' + (process.env.SHOTS || '/tmp') + '/evolution.png', fullPage: true });
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'sin scroll horizontal en la evolución');
 
