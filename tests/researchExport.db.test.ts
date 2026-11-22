@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 import { runResearchExport } from '../src/services/researchExport/bundle';
 import { STANDARD_DIALECT } from '../src/services/researchExport/csv';
-import type { DataSource } from '../src/services/researchExport/reader';
+import { MissingColumnError, type DataSource } from '../src/services/researchExport/reader';
 import { readZip } from '../src/services/researchExport/zip';
 
 const DB = process.env.EXPORT_DB_URL;
@@ -43,7 +43,15 @@ function pgSource(uid: string): DataSource {
       return Number(asUser(uid, `select count(*) from public.${table};`));
     },
     async page(request, from, to) {
-      const out = asUser(uid, `select coalesce(json_agg(t), '[]') from (select ${request.columns} from public.${request.table} order by ${request.orderBy} limit ${to - from + 1} offset ${from}) t;`);
+      let out: string;
+      try {
+        out = asUser(uid, `select coalesce(json_agg(t), '[]') from (select ${request.columns} from public.${request.table} order by ${request.orderBy} limit ${to - from + 1} offset ${from}) t;`);
+      } catch (error) {
+        // Esquema canónico sin una migración pendiente (p. ej., 20261122120000): mismo trato que PostgREST (42703).
+        const stderr = String((error as { stderr?: unknown }).stderr ?? (error as Error).message);
+        if (/column .* does not exist/.test(stderr)) throw new MissingColumnError(stderr);
+        throw error;
+      }
       return JSON.parse(out) as unknown[];
     },
   };

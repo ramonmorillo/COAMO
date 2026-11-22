@@ -78,8 +78,14 @@ export function ResearchExportPage() {
           </li>
           <li>
             <strong>Contenido:</strong> raw/ (centros, pacientes, inclusión, visitas, datos clínicos, cuestionarios, estratificaciones, ventana de la
-            visita final); analisis/ (LONG por visita, WIDE por paciente con V0/VF y cambio VF − V0 de IEXPAC global, ítems de cuestionarios,
-            respuestas de la estratificación, incidencias de integridad); diccionario de variables; .sps por fichero; Excel y JSON.
+            visita final, evolución farmacéutica, catálogo y registros de actuaciones con fecha prevista, fecha real y visita de origen); analisis/
+            (LONG por visita, WIDE por paciente con V0/VF, evolución longitudinal por indicador con diferencia frente a basal, ítems de cuestionarios,
+            respuestas de la estratificación, incidencias de integridad); diccionario de variables; .sps por fichero; Excel (con hoja «indice» que
+            relaciona los bloques Pacientes, Visitas, Estratificación, Actuaciones, Cuestionarios, Evolución y Diccionario) y JSON.
+          </li>
+          <li>
+            Formato «Excel España»: los textos que empiezan por =, +, −, @ o apóstrofo llevan un apóstrofo delante para que la hoja de cálculo no los
+            ejecute como fórmula (protección frente a inyección). El formato estándar (SPSS, R, Stata) y el Excel del paquete conservan el texto exacto.
           </li>
           <li>Ausente = celda vacía, nunca 0 ni −999. Las puntuaciones son las calculadas por la base de datos (no se recalculan al exportar).</li>
           <li>Formato {EXPORT_FORMAT_VERSION}. La descarga se genera en el navegador y no queda registrada en la auditoría (limitación conocida).</li>

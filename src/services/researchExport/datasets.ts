@@ -62,7 +62,9 @@ export const TABLE_REQUESTS = {
   intervention_catalog: { table: 'coag_intervention_catalog', columns: 'code,catalog_version,domain,applies_to_priorities,source_table,sort_order,action_text,is_active', orderBy: 'code' },
   interventions: {
     table: 'coag_interventions',
-    columns: 'id,visit_id,catalog_code,custom_text,domain,status,performed_date,followup_note,priority_context,recommended_for_priority,revision,created_at,updated_at',
+    columns: 'id,visit_id,catalog_code,custom_text,domain,status,performed_date,planned_date,origin_intervention_id,followup_note,priority_context,recommended_for_priority,revision,created_at,updated_at',
+    // Sin la migración 20261122120000_coag_interventions_planning: mismas columnas salvo planned_date y origin_intervention_id (vacías).
+    fallbackColumns: 'id,visit_id,catalog_code,custom_text,domain,status,performed_date,followup_note,priority_context,recommended_for_priority,revision,created_at,updated_at',
     orderBy: 'id',
   },
   // Vista: fecha esperada y ventana de la visita final (basal + 12 meses ±1 mes, protocolo p. 14).
@@ -114,6 +116,7 @@ const QREASON_VALUES = {
 const MODE_VALUES = { self: 'Autoadministrado', assisted: 'Con ayuda', interviewer: 'Por entrevista' };
 const DATA_SOURCE_VALUES = { electronic: 'Electrónico', paper: 'Papel' };
 const INTERVENTION_DOMAIN_VALUES = { pharmacotherapeutic_followup: 'Seguimiento farmacoterapéutico', patient_education: 'Educación, formación y seguimiento del paciente', care_coordination: 'Coordinación con el equipo asistencial' };
+const FOLLOWUP_STATE_VALUES = { pending: 'Pendiente', overdue: 'Pendiente con fecha prevista superada', performed_later: 'Realizada en una visita posterior', performed_same_visit: 'Realizada en su visita (con fecha prevista)', performed: 'Realizada (sin previsión)', discarded: 'Anulada' };
 const INTERVENTION_STATUS_VALUES = { planned: 'Prevista', performed: 'Realizada', discarded: 'Anulada (registro erróneo)' };
 const STRAT_STATUS_VALUES = { in_progress: 'En curso (borrador)', completed: 'Completada' };
 
@@ -279,6 +282,34 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
   for (const list of activeByPatientType.values()) {
     if (list.length > 1) issue('visita_duplicada', 'error', 'coag_visits', list.map((v) => v.id).join('|'), studyCodeOfPatient(list[0].patient_id), `${list.length} visitas ${String(list[0].visit_type)} no anuladas.`);
   }
+
+  // Actuaciones: columnas de planificación (vacías si la migración no está aplicada) y estado de seguimiento derivado.
+  const interventionsRaw = raw.interventions ?? [];
+  const interventionById = new Map(interventionsRaw.map((r) => [r.id as string, r]));
+  const resolutionByOrigin = new Map<string, Row>();
+  for (const r of interventionsRaw) {
+    const origin = r.origin_intervention_id as string | null | undefined;
+    if (!origin || r.status === 'discarded') continue;
+    if (resolutionByOrigin.has(origin)) issue('realizacion_duplicada', 'error', 'coag_interventions', origin, studyCodeOfVisit(r.visit_id), 'Una actuación prevista tiene más de una realización activa vinculada.');
+    resolutionByOrigin.set(origin, r);
+    const o = interventionById.get(origin);
+    if (!o) issue('huerfano', 'error', 'coag_interventions', r.id as string, studyCodeOfVisit(r.visit_id), 'La actuación prevista de origen no está en la extracción.');
+    else if (studyCodeOfVisit(o.visit_id) !== studyCodeOfVisit(r.visit_id)) issue('valor_no_valido', 'error', 'coag_interventions', r.id as string, studyCodeOfVisit(r.visit_id), 'La actuación de origen pertenece a otro paciente.');
+  }
+  const interventionRows: Row[] = interventionsRaw.map((r) => {
+    const planned = (r.planned_date as string | null | undefined) ?? null;
+    const resolution = resolutionByOrigin.get(r.id as string) ?? null;
+    const state = r.status === 'discarded' ? 'discarded'
+      : r.status === 'performed' ? (planned ? 'performed_same_visit' : 'performed')
+        : resolution ? 'performed_later' : planned && planned < todayIso ? 'overdue' : 'pending';
+    return {
+      ...r,
+      planned_date: planned,
+      origin_intervention_id: (r.origin_intervention_id as string | null | undefined) ?? null,
+      estado_seguimiento: state,
+      realizada_en_registro_id: resolution ? resolution.id : null,
+    };
+  });
 
   // ── RAW ──
   const visitStatusValues = VISIT_STATUS_LABEL as Record<string, string>;
@@ -448,7 +479,11 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         c('custom_text', 'Actuación adicional (texto libre)', 'string', 'coag_interventions.custom_text', { notes: 'Texto libre: revisar antes de compartir.' }),
         c('domain', 'Ámbito', 'string', 'coag_interventions.domain', { values: INTERVENTION_DOMAIN_VALUES }),
         c('status', 'Estado', 'string', 'coag_interventions.status', { values: INTERVENTION_STATUS_VALUES, definition: 'Recomendada ≠ realizada: solo «performed» cuenta como realizada; «discarded» = registro anulado por error.' }),
-        c('performed_date', 'Fecha de realización', 'date', 'coag_interventions.performed_date'),
+        c('performed_date', 'Fecha real de realización', 'date', 'coag_interventions.performed_date', { definition: 'Solo en registros «performed». Nunca futura.' }),
+        c('planned_date', 'Fecha prevista de realización', 'date', 'coag_interventions.planned_date', { definition: 'Fijada al prever (≥ fecha de la visita); se conserva al realizarla. Vacía en registros anteriores a la migración 20261122120000 o realizados sin previsión. Distinta de created_at (fecha de registro).' }),
+        c('origin_intervention_id', 'Actuación prevista de origen (UUID)', 'string', 'coag_interventions.origin_intervention_id', { definition: 'Si no está vacío, este registro documenta en SU visita la realización de una actuación prevista en una visita anterior (id de ese registro, que se conserva sin cambios). Una prevista solo puede tener una realización activa.' }),
+        c('estado_seguimiento', 'Estado de seguimiento', 'string', 'derivada', { values: FOLLOWUP_STATE_VALUES, rule: 'pending/overdue: prevista sin realización vinculada (overdue si la fecha prevista es anterior a la fecha de exportación); performed_later: prevista realizada en una visita posterior (registro con origin_intervention_id); performed_same_visit: realizada en su visita con fecha prevista previa; performed: realizada sin previsión; discarded: anulada.' }),
+        c('realizada_en_registro_id', 'Registro que documenta su realización posterior (UUID)', 'string', 'derivada', { rule: 'Solo en previstas resueltas en otra visita: id del registro con origin_intervention_id = id (no anulado).' }),
         c('followup_note', 'Seguimiento / resultado (texto libre)', 'string', 'coag_interventions.followup_note', { notes: 'Texto libre: revisar antes de compartir.' }),
         c('priority_context', 'Prioridad CMO vigente al registrarla', 'integer', 'coag_interventions.priority_context', { values: PRIORITY_VALUES, rule: 'La fija la BD: última estratificación completada del paciente hasta la fecha de la visita. Vacío = sin estratificación previa.' }),
         c('recommended_for_priority', 'Estaba recomendada para esa prioridad', 'boolean', 'coag_interventions.recommended_for_priority', { values: YES_NO, definition: 'Vacío en actuaciones adicionales o sin prioridad.' }),
@@ -456,7 +491,7 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
         createdAt('coag_interventions'),
         updatedAt('coag_interventions'),
       ],
-      rows: raw.interventions ?? [],
+      rows: interventionRows,
     },
     {
       id: 'evolucion_farmaceutica', folder: 'raw', title: 'Evolución farmacéutica por visita (texto libre)', grain: 'Una evolución por visita', key: ['visit_id'],
@@ -767,9 +802,91 @@ export function buildDatasets(raw: RawData, todayIso: string): BuildResult {
     }
   }
 
+  // ── EVOLUCIÓN: una fila por paciente × visita × indicador (solo registros existentes; ausencias con motivo) ──
+  type Indicator = { id: string; label: string; instrument: string | null; direction: string; scale: string; version: (r: Row) => string | null;
+    value: (r: Row) => number | null; source: Row[]; isAdmin: boolean };
+  const scoreOf = (key: string) => (r: Row) => {
+    const sc = r.scores as Record<string, unknown> | null;
+    return r.status === 'completed' && typeof sc?.[key] === 'number' ? (sc[key] as number) : null;
+  };
+  const adminsOf = (code: InstrumentCode) => raw.questionnaires.filter((q) => q.instrument_code === code);
+  const qVersion = (r: Row) => `${String(r.instrument_version ?? '—')} · ${String(r.scoring_version ?? '—')}`;
+  const indicators: Indicator[] = [
+    { id: 'iexpac_global', label: 'IEXPAC puntuación global (0-10)', instrument: 'IEXPAC', direction: 'mayor_mejor', scale: '0-10', version: qVersion, value: scoreOf('global_0_10'), source: adminsOf('IEXPAC'), isAdmin: true },
+    { id: 'eq5d_eva', label: 'EQ-5D-3L EVA (0-100)', instrument: 'EQ5D3L', direction: 'mayor_mejor', scale: '0-100', version: qVersion, value: scoreOf('vas'), source: adminsOf('EQ5D3L'), isAdmin: true },
+    { id: 'evasaf_suma_descriptiva', label: 'EVASAF suma descriptiva (10-50; no validada)', instrument: 'EVASAF', direction: 'mayor_mejor', scale: '10-50',
+      version: (r) => `${String(r.instrument_version ?? '—')} · ${EVASAF_DESCRIPTIVE_SUM_VERSION}`,
+      value: (r) => (r.status === 'completed' ? evasafDescriptiveSum(r.responses as Responses) : null), source: adminsOf('EVASAF'), isAdmin: true },
+    { id: 'vprn_total', label: 'VERITAS-PRN total (24-120)', instrument: 'VERITAS_PRN', direction: 'menor_mejor', scale: '24-120', version: qVersion, value: scoreOf('total'), source: adminsOf('VERITAS_PRN'), isAdmin: true },
+    { id: 'vpro_total', label: 'VERITAS-Pro total (24-120)', instrument: 'VERITAS_PRO', direction: 'menor_mejor', scale: '24-120', version: qVersion, value: scoreOf('total'), source: adminsOf('VERITAS_PRO'), isAdmin: true },
+    { id: 'cmo_puntuacion', label: 'Puntuación CMO total', instrument: null, direction: 'mayor_mas_necesidad', scale: '0-59', version: (r) => (r.model_version as string | null) ?? null,
+      value: (r) => (r.status === 'completed' && typeof r.score === 'number' ? r.score : null), source: raw.stratifications, isAdmin: false },
+    { id: 'cmo_prioridad', label: 'Prioridad CMO asignada (1 = máxima)', instrument: null, direction: 'menor_mas_necesidad', scale: '1-3', version: (r) => (r.model_version as string | null) ?? null,
+      value: (r) => (r.status === 'completed' && typeof r.final_priority === 'number' ? r.final_priority : null), source: raw.stratifications, isAdmin: false },
+  ];
+  const baselineVisitOf = new Map<string, string>();
+  for (const v of raw.visits) if (v.visit_type === 'baseline' && v.status !== 'cancelled') baselineVisitOf.set(v.patient_id as string, v.id as string);
+  const evolutionRows: Row[] = [];
+  for (const ind of indicators) {
+    const baseByPatient = new Map<string, Row>();
+    for (const r of ind.source) {
+      const v = visitById.get(r.visit_id as string);
+      if (v && baselineVisitOf.get(v.patient_id as string) === v.id) baseByPatient.set(v.patient_id as string, r);
+    }
+    for (const r of ind.source) {
+      const v = visitById.get(r.visit_id as string);
+      if (!v || v.status === 'cancelled') continue;
+      const value = ind.value(r);
+      const base = baseByPatient.get(v.patient_id as string) ?? null;
+      const baseValue = base ? ind.value(base) : null;
+      const sameVersion = base !== null && ind.version(base) === ind.version(r);
+      const isBaseline = base === r;
+      evolutionRows.push({
+        study_code: studyCodeOfPatient(v.patient_id),
+        visit_id: v.id,
+        visit_type: v.visit_type,
+        fecha_observacion: ind.isAdmin ? ((r.administration_date as string | null) ?? (v.visit_date as string)) : (v.visit_date as string),
+        indicador: ind.id,
+        indicador_etiqueta: ind.label,
+        instrumento: ind.instrument,
+        escala: ind.scale,
+        direccion: ind.direction,
+        version_calculo: ind.version(r),
+        valor: value,
+        motivo_ausencia: value !== null ? null : r.status !== 'completed' ? `estado ${String(r.status)}` : 'incompleto (sin puntuación; no se imputa)',
+        valor_basal: isBaseline ? null : baseValue,
+        diferencia_basal: !isBaseline && value !== null && baseValue !== null && sameVersion ? Math.round((value - baseValue) * 10000) / 10000 : null,
+        diferencia_no_calculable: isBaseline ? 'es la basal' : value === null || baseValue === null ? 'falta valor actual o basal' : !sameVersion ? 'versión distinta a la basal' : null,
+      });
+    }
+  }
+  evolutionRows.sort((a, b) => String(a.study_code ?? '').localeCompare(String(b.study_code ?? '')) || String(a.indicador).localeCompare(String(b.indicador))
+    || String(a.fecha_observacion).localeCompare(String(b.fecha_observacion)) || String(a.visit_id).localeCompare(String(b.visit_id)));
+
   const analysisDatasets: Dataset[] = [
     { id: 'long_visitas', folder: 'analisis', title: 'Formato longitudinal (LONG): una fila por visita o contacto', grain: 'Una visita', key: ['visit_id'], columns: longColumns, rows: longRows },
     { id: 'wide_pacientes', folder: 'analisis', title: 'Formato transversal (WIDE): una fila por paciente con V0 y VF', grain: 'Un paciente', key: ['study_code'], columns: wideColumns, rows: wideRows },
+    {
+      id: 'evolucion', folder: 'analisis', title: 'Evolución longitudinal por indicador (formato largo)', grain: 'Un indicador de un paciente en una visita', key: ['visit_id', 'indicador'],
+      columns: [
+        c('study_code', 'Código de estudio del paciente', 'string', 'coag_patients.study_code'),
+        c('visit_id', 'Identificador de la visita (UUID)', 'string', 'coag_visits.id'),
+        c('visit_type', 'Tipo de visita', 'string', 'coag_visits.visit_type', { values: VISIT_TYPE_LABEL }),
+        c('fecha_observacion', 'Fecha de la observación', 'date', 'derivada', { rule: 'Cuestionarios: administration_date (o fecha de la visita si falta). CMO: fecha de la visita.' }),
+        c('indicador', 'Indicador (código)', 'string', 'derivada'),
+        c('indicador_etiqueta', 'Indicador', 'string', 'derivada'),
+        c('instrumento', 'Instrumento (vacío = estratificación CMO)', 'string', 'coag_questionnaire_administrations.instrument_code'),
+        c('escala', 'Rango de la escala', 'string', 'derivada'),
+        c('direccion', 'Dirección de interpretación', 'string', 'derivada', { values: { mayor_mejor: 'Mayor = mejor', menor_mejor: 'Menor = mejor (VERITAS: menor = mayor adherencia)', mayor_mas_necesidad: 'Mayor = más necesidad de atención (no es «mejor/peor»)', menor_mas_necesidad: 'Prioridad 1 = máxima necesidad de atención' } }),
+        c('version_calculo', 'Versión del instrumento y del cálculo', 'string', 'derivada', { rule: 'Cuestionarios: instrument_version · scoring_version. CMO: model_version.' }),
+        c('valor', 'Valor registrado', 'decimal', 'derivada', { rule: 'Puntuación guardada por la BD (o suma descriptiva EVASAF derivada). Solo registros completados; vacío = ausente (ver motivo_ausencia).' }),
+        c('motivo_ausencia', 'Motivo de valor ausente', 'string', 'derivada'),
+        c('valor_basal', 'Valor en la visita basal', 'decimal', 'derivada', { notes: 'Vacío en la propia basal o si no hay basal válida.' }),
+        c('diferencia_basal', 'Diferencia frente a la basal (valor − basal)', 'decimal', 'derivada', { rule: 'Solo con ambos valores y la MISMA versión de instrumento/cálculo; sin umbral de relevancia clínica.' }),
+        c('diferencia_no_calculable', 'Motivo de diferencia no calculable', 'string', 'derivada'),
+      ],
+      rows: evolutionRows,
+    },
     {
       id: 'cuestionarios_items', folder: 'analisis', title: 'Respuestas individuales a cuestionarios (formato largo)', grain: 'Un ítem de un instrumento en una visita', key: ['administration_id', 'item'],
       columns: [

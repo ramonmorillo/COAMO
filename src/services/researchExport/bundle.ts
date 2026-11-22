@@ -181,6 +181,21 @@ const DICTIONARY_COLUMNS: ColumnSpec[] = [
   'conjunto', 'fichero', 'variable', 'etiqueta', 'definicion', 'tipo', 'unidad', 'valores_admitidos', 'instrumento', 'visita', 'origen', 'regla_calculo', 'valores_perdidos', 'formato_spss', 'observaciones',
 ].map((name) => ({ name, label: name, type: 'string' as const, source: 'diccionario' }));
 
+/**
+ * Índice del libro: correspondencia entre los bloques de análisis del estudio y las hojas (se conservan los nombres de
+ * hoja existentes para no romper análisis ya preparados). Todas se relacionan por identificadores estables.
+ */
+export const WORKBOOK_INDEX: Array<[bloque: string, hojas: string, clave: string, contenido: string]> = [
+  ['PACIENTES', 'pacientes; inclusion; wide_pacientes', 'id / patient_id / study_code', 'Paciente seudonimizado, centro, edad, sexo, diagnóstico, estado; elegibilidad y consentimiento; resumen V0/VF.'],
+  ['VISITAS', 'visitas; datos_clinicos; long_visitas', 'visit_id (+ patient_id)', 'Fecha, tipo y estado de cada visita; datos clínicos del protocolo (basal y final); una fila por visita.'],
+  ['ESTRATIFICACIÓN', 'estratificaciones; estratificaciones_respuestas', 'stratification_id, visit_id', 'Versión del modelo, respuestas y puntos por pregunta, puntuación, prioridad del modelo y asignada; reglas por versión en metadatos.'],
+  ['ACTUACIONES', 'actuaciones; catalogo_actuaciones', 'id, visit_id, origin_intervention_id', 'Estado, fecha prevista, fecha real, visita de origen y estado de seguimiento.'],
+  ['CUESTIONARIOS', 'cuestionarios_registros; cuestionarios_items', 'id / administration_id, visit_id', 'Instrumento, versión, fecha de administración, respuestas por ítem, puntuaciones de la BD y completitud.'],
+  ['EVOLUCIÓN', 'evolucion; evolucion_farmaceutica', 'visit_id + indicador', 'Valor por visita, diferencia frente a basal (misma versión), dirección de interpretación; evolución farmacéutica (texto).'],
+  ['DICCIONARIO', 'diccionario', 'conjunto + variable', 'Variable, descripción, tipo, valores admitidos, unidad, origen, regla de cálculo, tratamiento de ausencias.'],
+  ['INCIDENCIAS', 'incidencias_integridad', 'tipo + registro_id', 'Errores y valores a revisar detectados en la extracción.'],
+];
+
 function buildWorkbook(serialized: Serialized[], dictionary: Array<Record<string, unknown>>, manifestRows: string[][], warnings: string[]): Uint8Array {
   const wb = XLSX.utils.book_new();
   const usedNames = new Set<string>();
@@ -192,6 +207,7 @@ function buildWorkbook(serialized: Serialized[], dictionary: Array<Record<string
     return name;
   };
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(manifestRows), sheetName('metadatos'));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['bloque', 'hojas', 'clave', 'contenido'], ...WORKBOOK_INDEX]), sheetName('indice'));
   XLSX.utils.book_append_sheet(
     wb,
     XLSX.utils.aoa_to_sheet([DICTIONARY_COLUMNS.map((c) => c.name), ...dictionary.map((r) => DICTIONARY_COLUMNS.map((c) => (r[c.name] as string | null) ?? ''))]),
@@ -212,7 +228,9 @@ function buildWorkbook(serialized: Serialized[], dictionary: Array<Record<string
           if (value === null || value === undefined) return null;
           if (col.type === 'integer' || col.type === 'decimal') return Number(value);
           if (col.type === 'boolean') return value ? 1 : 0;
-          // Fechas y textos como texto: sin conversión automática de Excel (zona horaria, ceros).
+          // Textos: valor original como celda de texto (SheetJS no lo interpreta como fórmula; sin apóstrofo de
+          // protección, que solo necesita el CSV). Fechas como texto: sin conversión automática (zona horaria, ceros).
+          if (col.type === 'string' && typeof value === 'string') return value;
           return cells[r][i];
         }),
       );
@@ -267,6 +285,9 @@ AVISO
 export async function buildExportBundle(raw: RawData, results: TableResult<unknown>[], options: ExportOptions): Promise<ExportBundle> {
   const now = options.now ?? new Date();
   const warnings: string[] = [];
+  for (const r of results) {
+    if (r.usedFallback) warnings.push(`${r.table}: la base de datos aún no tiene las columnas de la migración pendiente (fecha prevista y vínculo entre visitas de las actuaciones); se exportan vacías.`);
+  }
   const { datasets, issues } = buildDatasets(raw, localIsoDate(now));
 
   // Conciliación: cada tabla raw exporta exactamente las filas leídas de la base de datos.
@@ -361,6 +382,7 @@ export async function buildExportBundle(raw: RawData, results: TableResult<unkno
     ['app_version', manifest.app_version],
     ['questionnaire_scoring_version', manifest.questionnaire_scoring_version],
     ['stratification_scoring_version', manifest.stratification_scoring_version],
+    ['stratification_rules', JSON.stringify(manifest.stratification_rules)],
     ['estudio', manifest.study.title],
     ['ceim_registro', manifest.study.ethics_registry ?? ''],
     ['centros', centers.join(', ')],
