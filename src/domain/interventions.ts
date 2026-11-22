@@ -43,6 +43,10 @@ export type InterventionRecord = {
   domain: InterventionDomain;
   status: InterventionStatus;
   performed_date: string | null;
+  /** Fecha prevista (migración 20261122120000; ausente o null en registros previos o sin migración). */
+  planned_date?: string | null;
+  /** Actuación prevista en una visita anterior que este registro documenta como realizada. */
+  origin_intervention_id?: string | null;
   followup_note: string | null;
   priority_context: number | null;
   recommended_for_priority: boolean | null;
@@ -90,4 +94,75 @@ export function interventionText(record: Pick<InterventionRecord, 'catalog_code'
 /** Actuaciones REALIZADAS (no previstas ni anuladas), para la historia clínica y los recuentos. */
 export function performedInterventions<T extends Pick<InterventionRecord, 'status'>>(records: T[]): T[] {
   return records.filter((r) => r.status === 'performed');
+}
+
+// ── Planificación y continuidad entre visitas (migración 20261122120000_coag_interventions_planning) ──
+// Regla: el registro de la visita de origen NO se modifica cuando la actuación se realiza en una visita posterior.
+// La realización es un registro nuevo de esa visita con origin_intervention_id; la BD impide duplicarla.
+
+export type VisitRef = { id: string; visit_date: string; status: string; visit_type?: string };
+
+/** Realización activa (no anulada) de una actuación prevista, documentada en otra visita. */
+export function resolutionOf<T extends Pick<InterventionRecord, 'id' | 'status' | 'origin_intervention_id'>>(record: Pick<InterventionRecord, 'id'>, all: T[]): T | null {
+  return all.find((r) => r.origin_intervention_id === record.id && r.status !== 'discarded') ?? null;
+}
+
+export type FollowUpState = 'pending' | 'overdue' | 'performed_same_visit' | 'performed_later' | 'performed' | 'discarded';
+
+export const FOLLOWUP_STATE_LABEL: Record<FollowUpState, string> = {
+  pending: 'Pendiente',
+  overdue: 'Pendiente (fecha prevista superada)',
+  performed_same_visit: 'Realizada',
+  performed_later: 'Realizada en una visita posterior',
+  performed: 'Realizada',
+  discarded: 'Anulada',
+};
+
+/** Estado de seguimiento de un registro, sin modificarlo (deducido del vínculo). */
+export function followUpState(record: InterventionRecord, all: InterventionRecord[], today: string): FollowUpState {
+  if (record.status === 'discarded') return 'discarded';
+  if (record.status === 'performed') return record.planned_date ? 'performed_same_visit' : 'performed';
+  if (resolutionOf(record, all)) return 'performed_later';
+  return record.planned_date && record.planned_date < today ? 'overdue' : 'pending';
+}
+
+/**
+ * Actuaciones previstas en visitas ANTERIORES (por fecha; la misma fecha cuenta si es otra visita) que siguen
+ * pendientes: sin realización activa vinculada. Visitas anuladas excluidas. Orden: fecha prevista, luego visita.
+ */
+export function pendingFromEarlierVisits(current: VisitRef, visits: VisitRef[], all: InterventionRecord[]): InterventionRecord[] {
+  const byId = new Map(visits.map((v) => [v.id, v]));
+  return all
+    .filter((r) => {
+      const v = byId.get(r.visit_id);
+      return v && v.id !== current.id && v.status !== 'cancelled' && v.visit_date <= current.visit_date
+        && r.status === 'planned' && !resolutionOf(r, all);
+    })
+    .sort((a, b) => String(a.planned_date ?? '9999').localeCompare(String(b.planned_date ?? '9999'))
+      || (byId.get(a.visit_id)!.visit_date).localeCompare(byId.get(b.visit_id)!.visit_date));
+}
+
+/** Historial de actuaciones de visitas anteriores (todas, con su estado), de la más reciente a la más antigua. */
+export function earlierVisitHistory(current: VisitRef, visits: VisitRef[], all: InterventionRecord[]): Array<{ visit: VisitRef; records: InterventionRecord[] }> {
+  return visits
+    .filter((v) => v.id !== current.id && v.visit_date <= current.visit_date)
+    .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
+    .map((visit) => ({ visit, records: all.filter((r) => r.visit_id === visit.id) }))
+    .filter((g) => g.records.length > 0);
+}
+
+/** Fecha prevista: obligatoria al prever y no anterior a la fecha de la visita (misma regla que la BD). */
+export function validatePlannedDate(planned: string | null | undefined, visitDate: string): string[] {
+  if (!planned) return ['Indique la fecha prevista de realización.'];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(planned)) return ['Fecha prevista no válida.'];
+  if (planned < visitDate) return ['La fecha prevista no puede ser anterior a la fecha de la visita.'];
+  return [];
+}
+
+/** Fecha de realización: obligatoria y nunca futura (misma regla que la BD). */
+export function validatePerformedDate(performed: string | null | undefined, today: string): string[] {
+  if (!performed) return ['Indique la fecha en que se realizó la actuación.'];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(performed)) return ['Fecha de realización no válida.'];
+  if (performed > today) return ['La fecha de realización no puede ser futura: si aún no se ha hecho, use «Prever».'];
+  return [];
 }
