@@ -122,7 +122,6 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   await page.getByText(/Visita de seguimiento del 15\/06\/2026/).first().waitFor({ timeout: 15000 });
   await page.getByRole('heading', { name: 'Actuaciones pendientes de visitas anteriores' }).waitFor({ timeout: 15000 });
   const pendingRow = page.locator('li[data-pending]');
-  if (process.env.DEBUG) console.log('PENDING', await pendingRow.count(), await pendingRow.allTextContents(), await page.locator('li[data-code="EDU-08"]').allTextContents());
   ok(await pendingRow.count() === 1 && (await pendingRow.textContent()).includes('prevista en la Visita basal del 15/01/2026') && (await pendingRow.textContent()).includes('01/03/2026'),
     'visita 2: la prevista de la visita 1 aparece como pendiente con su visita de origen y fecha prevista');
   ok(await page.locator('li[data-code="EDU-08"]').getByText('Sin registrar').isVisible(), 'visita 2: no se copia ni duplica la actuación anterior');
@@ -138,7 +137,6 @@ const results = []; const ok = (cond, msg) => { results.push(`${cond ? 'OK ' : '
   const eduV0 = page.locator('li[data-code="EDU-08"]');
   await eduV0.waitFor({ timeout: 15000 });
   const eduText = await eduV0.textContent();
-  if (process.env.DEBUG) console.log('EDUV0', eduText);
   ok(eduText.includes('prevista para el 01/03/2026') && eduText.includes('documentada en la Visita de seguimiento del 15/06/2026'),
     'visita 1: conserva la fecha prevista y muestra dónde se documentó la realización');
   ok(await eduV0.getByRole('button', { name: 'Marcar como realizada' }).count() === 0 && await eduV0.getByRole('button', { name: 'Anular registro' }).count() === 0,

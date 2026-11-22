@@ -24,6 +24,8 @@ Incorporado el 03/11/2026 (migraciones `coag_veritas_scoring`, `coag_visit_evolu
 
 Pendiente: cotejo de la transcripción de las Tablas 5-7; revisión del CRD con «DATOS CLÍNICOS» (documento no aportado).
 
+**Revisión del investigador colaborador (22/11/2026)** — [`docs/AUDITORIA_REVISION_COLABORADOR_2026-11-22.md`](docs/AUDITORIA_REVISION_COLABORADOR_2026-11-22.md): actuaciones con fecha prevista y seguimiento entre visitas sin reescribir el histórico; estratificación sin el prefijo «M», inhibidores frente a FVIII/FIX/FvW y reglas por versión; variables articulares de hemofilia ocultas en EVW sin borrar datos; EVASAF con suma descriptiva (no validada); hojas de cuestionario en papel prellenadas; gráficos de evolución por instrumento; exportación con hoja de evolución, índice del Excel y protección de fórmulas. **Migración pendiente de aplicar**: [`db/pending/`](db/pending/README.md) (aditiva; el frontend funciona sin ella y avisa).
+
 ## Arquitectura
 
 - Frontend React + TypeScript + Vite, HashRouter, publicado en GitHub Pages (`https://ramonmorillo.github.io/COAMO/`).
